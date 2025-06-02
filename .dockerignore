@@ -1,0 +1,26 @@
+# Git files
+.git
+.gitignore
+
+# Node modules
+node_modules
+
+# Next.js build output (will be generated in builder stage)
+.next
+
+# Development specific files
+.vscode
+README.md
+apphosting.yaml
+Dockerfile
+.dockerignore
+
+# Environment files (if any, manage them securely outside the image or via build args)
+.env
+.env*.local
+
+# Turbopack cache (if used locally)
+.turbo
+
+# macOS specific
+.DS_Store
