@@ -61,9 +61,7 @@ export function RationalFunctionCard({
     <Card className={cardClass} data-testid={`function-card-${func.id}`}>
       <CardHeader className="p-4">
         <CardTitle className="font-headline text-lg">{func.equation}</CardTitle>
-        {func.properties.holes && func.properties.holes.length > 0 && (
-           <CardDescription className="text-xs">Hole(s) at: {func.properties.holes.join(', ')}</CardDescription>
-        )}
+        {/* Hole hint removed from here */}
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="aspect-[3/2] w-full bg-muted rounded overflow-hidden mb-2">
@@ -76,7 +74,6 @@ export function RationalFunctionCard({
             data-ai-hint="function graph"
           />
         </div>
-        {/* Property hints removed from here */}
       </CardContent>
       <CardFooter className="p-4 pt-0 flex justify-end space-x-2">
         {showEliminateButton && (
