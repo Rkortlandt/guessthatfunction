@@ -6,7 +6,7 @@ import { FunctionGrid } from '@/components/game/FunctionGrid';
 import { GameControls } from '@/components/game/GameControls';
 import { INITIAL_FUNCTIONS, type RationalFunction } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Users, Loader2, ShieldCheck, HelpCircleIcon } from 'lucide-react';
+import { RotateCcw, Users, Loader2, ShieldCheck, HelpCircle } from 'lucide-react'; // Fixed HelpCircleIcon
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -51,13 +51,9 @@ export default function RationalGuesserPage() {
     resetGame();
   }, [resetGame]);
   
-  useEffect(() => {
-    if (gamePhase === 'P1_SELECTING' || gamePhase === 'P1_ANSWERING') {
-      setShowP1ScreenCover(true);
-    }
-  }, [gamePhase]);
+  // Removed useEffect that automatically showed P1ScreenCoverDialog
 
-  const handleConfirmP1Action = () => {
+  const handleConfirmP1Dialog = () => {
     setShowP1ScreenCover(false);
     if (gamePhase === 'P1_SELECTING' && player1SecretFunction) {
       setGamePhase('P2_ASKING');
@@ -68,13 +64,22 @@ export default function RationalGuesserPage() {
     }
   };
 
+  const handleP1ReadyToHideScreen = () => {
+    // This function is called by GameControls when P1 is ready to show the dialog
+    if ((gamePhase === 'P1_SELECTING' && player1SecretFunction) || (gamePhase === 'P1_ANSWERING' && player1ManualAnswer !== null)) {
+      setShowP1ScreenCover(true);
+    } else {
+      // Should not happen if GameControls button is properly conditioned
+      toast({ title: "Action Incomplete", description: "Please complete your selection or answer first.", variant: "destructive" });
+    }
+  };
+
   const handleSelectSecretFunction = (id: string) => {
     if (gamePhase !== 'P1_SELECTING') return;
     const selectedFunc = functions.find(f => f.id === id);
     if (selectedFunc) {
       setPlayer1SecretFunction(selectedFunc);
-      // Don't change game phase here, wait for P1 to confirm via screen cover.
-      toast({ title: "Function Selected", description: "Player 1 has selected a function. Confirm to hide and let Player 2 ask." });
+      // Toast removed, GameControls will guide P1 to confirm
     }
   };
 
@@ -82,15 +87,14 @@ export default function RationalGuesserPage() {
     if (gamePhase !== 'P2_ASKING' || !player1SecretFunction) return;
     setCurrentQuestionFromP2(question);
     setGamePhase('P1_ANSWERING');
-    setPlayer1ManualAnswer(null); // Clear previous answer
+    setPlayer1ManualAnswer(null); 
     toast({ title: "Question Submitted", description: "Player 1, it's your turn to answer." });
   };
 
   const handleAnswerQuestion = (answer: boolean) => {
     if (gamePhase !== 'P1_ANSWERING' || !currentQuestionFromP2) return;
     setPlayer1ManualAnswer(answer);
-     // Don't change game phase here, wait for P1 to confirm via screen cover.
-    toast({ title: "Answer Logged", description: "Player 1 has answered. Confirm to hide and let Player 2 evaluate." });
+    // Toast removed, GameControls will guide P1 to confirm
   };
 
   const handleToggleEliminate = (id: string) => {
@@ -103,8 +107,8 @@ export default function RationalGuesserPage() {
     );
      if (gamePhase === 'P2_EVALUATING') {
        setGamePhase('P2_ASKING'); 
-       setPlayer1ManualAnswer(null); // Clear P1's answer for next round
-       setCurrentQuestionFromP2(''); // Clear P2's question
+       setPlayer1ManualAnswer(null); 
+       setCurrentQuestionFromP2(''); 
      }
   };
   
@@ -133,7 +137,7 @@ export default function RationalGuesserPage() {
   const remainingFunctions = functions.filter(f => !f.isEliminated);
   const remainingFunctionsCount = remainingFunctions.length;
 
-  if (functions.length === 0) { // Initial loading state before resetGame populates functions
+  if (functions.length === 0) { 
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -151,12 +155,21 @@ export default function RationalGuesserPage() {
           </DialogTitle>
         </DialogHeader>
         <DialogDescription className="my-4 text-lg">
-          {gamePhase === 'P1_SELECTING' && !player1SecretFunction && "Please select your secret function from the grid."}
-          {gamePhase === 'P1_SELECTING' && player1SecretFunction && "You've selected a function. Ready to hide it from Player 2?"}
-          {gamePhase === 'P1_ANSWERING' && `Player 2 asked: "${currentQuestionFromP2}". How do you answer?`}
+          {gamePhase === 'P1_SELECTING' && player1SecretFunction && "You've selected your secret function. Press confirm to hide the screen and let Player 2 begin."}
+          {gamePhase === 'P1_ANSWERING' && player1ManualAnswer !== null && `Player 2 asked: "${currentQuestionFromP2}". You've provided your answer. Press confirm to hide the screen.`}
+          {/* Fallback/Error cases - should not ideally be seen with new flow */}
+          {gamePhase === 'P1_SELECTING' && !player1SecretFunction && "Error: No function selected. Please select a function first."}
+          {gamePhase === 'P1_ANSWERING' && player1ManualAnswer === null && "Error: No answer provided. Please answer the question first."}
         </DialogDescription>
         <DialogFooter className="sm:justify-center">
-          <Button onClick={handleConfirmP1Action} size="lg" disabled={gamePhase === 'P1_SELECTING' && !player1SecretFunction || gamePhase === 'P1_ANSWERING' && player1ManualAnswer === null}>
+          <Button 
+            onClick={handleConfirmP1Dialog} 
+            size="lg" 
+            disabled={
+              (gamePhase === 'P1_SELECTING' && !player1SecretFunction) || 
+              (gamePhase === 'P1_ANSWERING' && player1ManualAnswer === null)
+            }
+          >
             Confirm & Hide Screen
           </Button>
         </DialogFooter>
@@ -194,6 +207,7 @@ export default function RationalGuesserPage() {
             onStartGuessing={handleStartGuessing}
             onCancelGuessing={handleCancelGuessing}
             player1SecretFunctionId={player1SecretFunction?.id || null}
+            onP1ReadyToHideScreen={handleP1ReadyToHideScreen} // New prop
           />
            {gamePhase === 'GAME_OVER' && player1SecretFunction && (
             <Alert variant={gameResult === 'P2_WINS' ? 'default' : 'destructive'} className="mt-4">
