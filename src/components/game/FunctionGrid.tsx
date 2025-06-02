@@ -2,55 +2,91 @@
 import type { RationalFunction } from '@/lib/game-data';
 import { RationalFunctionCard } from './RationalFunctionCard';
 
+type Player = 'P1' | 'P2';
+type GridMode = 'selecting' | 'viewing_opponent_grid' | 'answering_own_card' | 'game_over';
+
 interface FunctionGridProps {
-  functions: RationalFunction[];
-  onToggleEliminate: (id: string) => void;
-  isGameActive: boolean;
-  onMakeFinalGuess?: (id:string) => void;
-  isGuessingPhase?: boolean; 
-  isPlayer1Selecting?: boolean; 
-  player1IsAnsweringPhase?: boolean; // New prop: True if P1 is in their answering phase
+  functionsToDisplay: RationalFunction[];
+  gridMode: GridMode;
+  currentPlayer: Player; // To know who is interacting
   onSelectSecretFunction?: (id: string) => void;
-  selectedSecretFunctionId?: string | null;
+  onToggleEliminate?: (id: string) => void;
+  onMakeFinalGuess?: (id: string) => void;
+  selectedSecretFunctionIdForHighlight?: string | null; // For highlighting during selection phase
+  actualSecretFunctionForHighlight?: RationalFunction | null; // For highlighting the player's own card when answering
 }
 
-export function FunctionGrid({ 
-  functions, 
-  onToggleEliminate, 
-  isGameActive, 
-  onMakeFinalGuess, 
-  isGuessingPhase,
-  isPlayer1Selecting,
-  player1IsAnsweringPhase, // New prop
+export function FunctionGrid({
+  functionsToDisplay,
+  gridMode,
+  currentPlayer,
   onSelectSecretFunction,
-  selectedSecretFunctionId,
+  onToggleEliminate,
+  onMakeFinalGuess,
+  selectedSecretFunctionIdForHighlight,
+  actualSecretFunctionForHighlight,
 }: FunctionGridProps) {
+  
+  const showSelectButtonForCard = (func: RationalFunction): boolean => {
+    return gridMode === 'selecting' && !!onSelectSecretFunction;
+  };
 
-  let functionsToDisplay = functions;
+  const showEliminateButtonForCard = (func: RationalFunction): boolean => {
+    // Show eliminate if it's opponent's grid view and the function is not eliminated
+    // And eliminate action is available
+    return gridMode === 'viewing_opponent_grid' && !!onToggleEliminate;
+  };
+  
+  const showMakeGuessButtonForCard = (func: RationalFunction): boolean => {
+    // Show guess if it's opponent's grid view, function not eliminated, and action available
+    return gridMode === 'viewing_opponent_grid' && !func.isEliminated && !!onMakeFinalGuess;
+  };
 
-  if (player1IsAnsweringPhase && selectedSecretFunctionId) {
-    functionsToDisplay = functions.filter(f => f.id === selectedSecretFunctionId);
+  const isCardSelectedAsSecretForUI = (funcId: string): boolean => {
+    return gridMode === 'selecting' && selectedSecretFunctionIdForHighlight === funcId;
+  };
+
+  const isCardActuallySecretForUI = (funcId: string): boolean => {
+    return (gridMode === 'answering_own_card' || gridMode === 'game_over') && actualSecretFunctionForHighlight?.id === funcId;
+  };
+
+
+  let gridLayoutClass = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+  if ((gridMode === 'answering_own_card' || gridMode === 'game_over') && functionsToDisplay.length === 1) {
+    gridLayoutClass = 'grid-cols-1 place-items-center';
   }
 
+
   return (
-    <div className={`grid gap-4 p-4 bg-secondary/30 rounded-lg shadow-inner ${player1IsAnsweringPhase && functionsToDisplay.length === 1 ? 'grid-cols-1 place-items-center' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+    <div className={`grid gap-4 p-4 bg-secondary/30 rounded-lg shadow-inner ${gridLayoutClass}`}>
       {functionsToDisplay.map((func) => (
-        <RationalFunctionCard 
-          key={func.id} 
-          func={func} 
-          onToggleEliminate={onToggleEliminate}
-          showEliminateButton={isGameActive && !isGuessingPhase && !isPlayer1Selecting && !player1IsAnsweringPhase}
-          onMakeFinalGuess={onMakeFinalGuess}
-          isPotentialGuess={isGuessingPhase && !func.isEliminated && !player1IsAnsweringPhase}
-          showSelectButton={isPlayer1Selecting && onSelectSecretFunction !== undefined}
+        <RationalFunctionCard
+          key={func.id}
+          func={func}
+          showSelectButton={showSelectButtonForCard(func)}
           onSelectSecretFunction={onSelectSecretFunction}
-          isSelectedAsSecret={selectedSecretFunctionId === func.id && isPlayer1Selecting} // Only show selection border during P1_SELECTING
-          isActuallySecret={player1IsAnsweringPhase && func.id === selectedSecretFunctionId} // Highlight for P1 during P1_ANSWERING
+          isSelectedAsSecret={isCardSelectedAsSecretForUI(func.id)}
+          
+          showEliminateButton={showEliminateButtonForCard(func)}
+          onToggleEliminate={onToggleEliminate}
+          
+          isPotentialGuess={showMakeGuessButtonForCard(func)}
+          onMakeFinalGuess={onMakeFinalGuess}
+
+          isActuallySecret={isCardActuallySecretForUI(func.id)}
+          // Pass gridMode to card if it needs to alter its own internal display significantly
+          // For example, to hide/show certain elements not covered by button logic
+          isEliminatedOverride={gridMode === 'game_over' ? false : func.isEliminated} // Don't show eliminated style in game_over
         />
       ))}
-      {player1IsAnsweringPhase && functionsToDisplay.length === 0 && selectedSecretFunctionId && (
-        <p className="text-muted-foreground col-span-full text-center py-8">Loading Player 1's secret function...</p>
+      {(gridMode === 'answering_own_card' || gridMode === 'game_over') && functionsToDisplay.length === 0 && (
+        <p className="text-muted-foreground col-span-full text-center py-8">
+          {gridMode === 'answering_own_card' ? "Loading secret function..." : "No function to display for game over."}
+        </p>
       )}
+       {gridMode === 'selecting' && functionsToDisplay.length === 0 && (
+         <p className="text-muted-foreground col-span-full text-center py-8">Loading functions for selection...</p>
+       )}
     </div>
   );
 }

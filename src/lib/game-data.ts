@@ -4,14 +4,16 @@ export interface RationalFunction {
   equation: string; // For display
   graphImageUrl: string; // To display graph images (e.g., from Desmos)
   isEliminated: boolean;
+  // Properties are kept for potential future use or if players want to inspect them,
+  // but they are not directly used for AI hints anymore.
   properties: { 
     verticalAsymptotes?: string[];
     horizontalAsymptote?: string;
     slantAsymptote?: string;
-    holes?: string[];
-    xIntercepts?: string[];
-    yIntercept?: string;
-    domain?: string;
+    holes?: string[]; // e.g. "x = 1 (at y = 2)"
+    xIntercepts?: string[]; // e.g. "x = 0"
+    yIntercept?: string; // e.g. "y = 0"
+    domain?: string; // e.g. "All real numbers except x = -2"
     range?: string;
   };
 }
@@ -85,7 +87,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     isEliminated: false,
     properties: {
       holes: ['x = 2 (at y = 3)'], 
-      horizontalAsymptote: 'y = 3 (effectively)',
+      horizontalAsymptote: 'y = 3 (effectively)', // This is a constant function y=3 after hole cancellation
       yIntercept: 'y = 3',
       domain: 'All real numbers except x = 2',
     }
