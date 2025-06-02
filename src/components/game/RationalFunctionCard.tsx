@@ -102,7 +102,7 @@ export function RationalFunctionCard({
             onClick={handleEliminateClick}
             aria-label={displayEliminated ? `Restore function ${func.equation}` : `Eliminate function ${func.equation}`}
             className="w-full sm:w-auto"
-            disabled={displayEliminated} // Disable if already eliminated for this view
+            // REMOVED: disabled={displayEliminated} 
           >
             {displayEliminated ? <Eye className="mr-2" /> : <EyeOff className="mr-2" />}
             {displayEliminated ? 'Restore (View)' : 'Eliminate'}
