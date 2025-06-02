@@ -76,13 +76,7 @@ export function RationalFunctionCard({
             data-ai-hint="function graph"
           />
         </div>
-        <div className="text-xs space-y-0.5">
-          {func.properties.verticalAsymptotes && <p>VA: {func.properties.verticalAsymptotes.join(', ')}</p>}
-          {func.properties.horizontalAsymptote && <p>HA: {func.properties.horizontalAsymptote}</p>}
-          {func.properties.slantAsymptote && <p>SA: {func.properties.slantAsymptote}</p>}
-          {func.properties.xIntercepts && <p>X-int: {func.properties.xIntercepts.join(', ')}</p>}
-          {func.properties.yIntercept && <p>Y-int: {func.properties.yIntercept}</p>}
-        </div>
+        {/* Property hints removed from here */}
       </CardContent>
       <CardFooter className="p-4 pt-0 flex justify-end space-x-2">
         {showEliminateButton && (
