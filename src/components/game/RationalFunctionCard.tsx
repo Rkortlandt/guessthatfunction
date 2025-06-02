@@ -1,25 +1,59 @@
+
 import type { RationalFunction } from '@/lib/game-data';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { EyeOff, Eye } from 'lucide-react';
+import { EyeOff, Eye, CheckSquare, Square, ShieldAlert } from 'lucide-react';
 
 interface RationalFunctionCardProps {
   func: RationalFunction;
   onToggleEliminate: (id: string) => void;
-  isGameActive: boolean;
+  showEliminateButton: boolean; // Controls visibility of eliminate/restore button (for P2)
   onMakeFinalGuess?: (id: string) => void;
-  isPotentialGuess?: boolean;
+  isPotentialGuess?: boolean; // Controls visibility of "Make Final Guess" button (for P2)
+  showSelectButton?: boolean; // Controls visibility of "Select as Secret" button (for P1)
+  onSelectSecretFunction?: (id: string) => void; // Action for P1 selecting
+  isSelectedAsSecret?: boolean; // Visual cue if this card is P1's chosen secret
+  isActuallySecret?: boolean; // For P1 to see their own secret during answer phase (not implemented yet)
 }
 
-export function RationalFunctionCard({ func, onToggleEliminate, isGameActive, onMakeFinalGuess, isPotentialGuess }: RationalFunctionCardProps) {
-  const cardClass = func.isEliminated
-    ? 'opacity-40 transition-opacity duration-300 ease-in-out relative'
-    : 'transition-opacity duration-300 ease-in-out hover:shadow-lg relative';
+export function RationalFunctionCard({ 
+  func, 
+  onToggleEliminate, 
+  showEliminateButton,
+  onMakeFinalGuess, 
+  isPotentialGuess,
+  showSelectButton,
+  onSelectSecretFunction,
+  isSelectedAsSecret,
+  isActuallySecret
+}: RationalFunctionCardProps) {
+  
+  const cardClassBase = 'transition-opacity duration-300 ease-in-out relative';
+  let cardClass = cardClassBase;
 
-  const handleCardClick = () => {
-    if (isGameActive && !isPotentialGuess) { // Don't eliminate if it's a potential final guess phase
+  if (func.isEliminated && !showSelectButton) { // Don't dim if P1 is selecting
+    cardClass = `${cardClassBase} opacity-40 hover:shadow-lg`;
+  } else if (isSelectedAsSecret && showSelectButton) {
+    cardClass = `${cardClassBase} border-primary border-4 shadow-2xl`;
+  } else {
+    cardClass = `${cardClassBase} hover:shadow-lg`;
+  }
+  
+  if (isActuallySecret) { // Special highlight for P1's actual secret card when they are answering.
+     cardClass = `${cardClassBase} border-green-500 border-4 ring-4 ring-green-500/50 shadow-2xl`;
+  }
+
+
+  const handleEliminateClick = () => {
+    if (showEliminateButton) {
       onToggleEliminate(func.id);
+    }
+  };
+
+  const handleSelectClick = () => {
+    if (showSelectButton && onSelectSecretFunction) {
+      onSelectSecretFunction(func.id);
     }
   };
   
@@ -50,12 +84,12 @@ export function RationalFunctionCard({ func, onToggleEliminate, isGameActive, on
           {func.properties.yIntercept && <p>Y-int: {func.properties.yIntercept}</p>}
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-end">
-        {isGameActive && !isPotentialGuess && (
+      <CardFooter className="p-4 pt-0 flex justify-end space-x-2">
+        {showEliminateButton && (
           <Button
             variant="outline"
             size="sm"
-            onClick={handleCardClick}
+            onClick={handleEliminateClick}
             aria-label={func.isEliminated ? `Restore function ${func.equation}` : `Eliminate function ${func.equation}`}
           >
             {func.isEliminated ? <Eye className="mr-2" /> : <EyeOff className="mr-2" />}
@@ -63,11 +97,27 @@ export function RationalFunctionCard({ func, onToggleEliminate, isGameActive, on
           </Button>
         )}
         {isPotentialGuess && onMakeFinalGuess && (
-           <Button variant="primary" size="sm" onClick={() => onMakeFinalGuess(func.id)}>
+           <Button variant="default" size="sm" onClick={() => onMakeFinalGuess(func.id)}>
             Make Final Guess
            </Button>
         )}
+        {showSelectButton && onSelectSecretFunction && (
+          <Button 
+            variant={isSelectedAsSecret ? "secondary" : "default"} 
+            size="sm" 
+            onClick={handleSelectClick}
+            aria-label={isSelectedAsSecret ? `Deselect ${func.equation} as secret` : `Select ${func.equation} as secret`}
+          >
+            {isSelectedAsSecret ? <CheckSquare className="mr-2" /> : <Square className="mr-2" />}
+            {isSelectedAsSecret ? 'Selected Secret' : 'Select as Secret'}
+          </Button>
+        )}
       </CardFooter>
+       {isActuallySecret && (
+        <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full text-xs flex items-center">
+          <ShieldAlert className="w-3 h-3 mr-1" /> Secret
+        </div>
+      )}
     </Card>
   );
 }
