@@ -3,7 +3,7 @@ import type { RationalFunction } from '@/lib/game-data';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EyeOff, Eye, CheckSquare, Square, ShieldAlert } from 'lucide-react';
-import { DynamicRationalGraph } from './DynamicRationalGraph'; // Import the new component
+import Image from 'next/image';
 
 interface RationalFunctionCardProps {
   func: RationalFunction;
@@ -61,8 +61,14 @@ export function RationalFunctionCard({
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="aspect-[3/2] w-full bg-muted rounded overflow-hidden mb-2">
-          {/* Replace Image with DynamicRationalGraph */}
-          <DynamicRationalGraph func={func} />
+          <Image 
+            src={func.graphImageUrl} 
+            alt={`Graph of ${func.equation}`} 
+            width={600} 
+            height={400} 
+            className="object-cover w-full h-full"
+            data-ai-hint="graph plot"
+          />
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex justify-end space-x-2">
