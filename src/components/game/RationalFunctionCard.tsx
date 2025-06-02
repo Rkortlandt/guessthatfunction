@@ -8,13 +8,13 @@ import { EyeOff, Eye, CheckSquare, Square, ShieldAlert } from 'lucide-react';
 interface RationalFunctionCardProps {
   func: RationalFunction;
   onToggleEliminate: (id: string) => void;
-  showEliminateButton: boolean; // Controls visibility of eliminate/restore button (for P2)
+  showEliminateButton: boolean; 
   onMakeFinalGuess?: (id: string) => void;
-  isPotentialGuess?: boolean; // Controls visibility of "Make Final Guess" button (for P2)
-  showSelectButton?: boolean; // Controls visibility of "Select as Secret" button (for P1)
-  onSelectSecretFunction?: (id: string) => void; // Action for P1 selecting
-  isSelectedAsSecret?: boolean; // Visual cue if this card is P1's chosen secret
-  isActuallySecret?: boolean; // For P1 to see their own secret during answer phase (not implemented yet)
+  isPotentialGuess?: boolean; 
+  showSelectButton?: boolean; 
+  onSelectSecretFunction?: (id: string) => void; 
+  isSelectedAsSecret?: boolean; 
+  isActuallySecret?: boolean; // True when this is P1's secret card AND it's P1's answering phase
 }
 
 export function RationalFunctionCard({ 
@@ -26,24 +26,24 @@ export function RationalFunctionCard({
   showSelectButton,
   onSelectSecretFunction,
   isSelectedAsSecret,
-  isActuallySecret
+  isActuallySecret // Now used to apply a very prominent style
 }: RationalFunctionCardProps) {
   
   const cardClassBase = 'transition-opacity duration-300 ease-in-out relative';
   let cardClass = cardClassBase;
 
-  if (func.isEliminated && !showSelectButton) { // Don't dim if P1 is selecting
-    cardClass = `${cardClassBase} opacity-40 hover:shadow-lg`;
+  if (isActuallySecret) {
+     // Prominent highlight for P1's secret card during their answering phase
+     cardClass = `${cardClassBase} border-green-500 border-4 ring-4 ring-green-500/50 shadow-2xl`;
   } else if (isSelectedAsSecret && showSelectButton) {
+    // Highlight for P1 during selection phase
     cardClass = `${cardClassBase} border-primary border-4 shadow-2xl`;
+  } else if (func.isEliminated && !showSelectButton && !isActuallySecret) {
+    // Dim for eliminated cards, but not if P1 is selecting or if it's the secret card P1 is viewing
+    cardClass = `${cardClassBase} opacity-40 hover:shadow-lg`;
   } else {
     cardClass = `${cardClassBase} hover:shadow-lg`;
   }
-  
-  if (isActuallySecret) { // Special highlight for P1's actual secret card when they are answering.
-     cardClass = `${cardClassBase} border-green-500 border-4 ring-4 ring-green-500/50 shadow-2xl`;
-  }
-
 
   const handleEliminateClick = () => {
     if (showEliminateButton) {
@@ -113,8 +113,8 @@ export function RationalFunctionCard({
           </Button>
         )}
       </CardFooter>
-       {isActuallySecret && (
-        <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full text-xs flex items-center">
+       {isActuallySecret && ( // Show "Secret" badge if it's P1's actual secret function during their answering turn
+        <div className="absolute top-2 right-2 bg-green-500 text-white p-1 rounded-full text-xs flex items-center z-10">
           <ShieldAlert className="w-3 h-3 mr-1" /> Secret
         </div>
       )}

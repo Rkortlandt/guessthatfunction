@@ -5,10 +5,11 @@ import { RationalFunctionCard } from './RationalFunctionCard';
 interface FunctionGridProps {
   functions: RationalFunction[];
   onToggleEliminate: (id: string) => void;
-  isGameActive: boolean; // True if P2 is asking, evaluating, or P1 is answering (grid visible but not interactive for P1)
+  isGameActive: boolean;
   onMakeFinalGuess?: (id:string) => void;
-  isGuessingPhase?: boolean; // P2 is making a final guess
-  isPlayer1Selecting?: boolean; // P1 is selecting their secret function
+  isGuessingPhase?: boolean; 
+  isPlayer1Selecting?: boolean; 
+  player1IsAnsweringPhase?: boolean; // New prop: True if P1 is in their answering phase
   onSelectSecretFunction?: (id: string) => void;
   selectedSecretFunctionId?: string | null;
 }
@@ -20,28 +21,36 @@ export function FunctionGrid({
   onMakeFinalGuess, 
   isGuessingPhase,
   isPlayer1Selecting,
+  player1IsAnsweringPhase, // New prop
   onSelectSecretFunction,
   selectedSecretFunctionId,
 }: FunctionGridProps) {
+
+  let functionsToDisplay = functions;
+
+  if (player1IsAnsweringPhase && selectedSecretFunctionId) {
+    functionsToDisplay = functions.filter(f => f.id === selectedSecretFunctionId);
+  }
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 bg-secondary/30 rounded-lg shadow-inner">
-      {functions.map((func) => (
+    <div className={`grid gap-4 p-4 bg-secondary/30 rounded-lg shadow-inner ${player1IsAnsweringPhase && functionsToDisplay.length === 1 ? 'grid-cols-1 place-items-center' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+      {functionsToDisplay.map((func) => (
         <RationalFunctionCard 
           key={func.id} 
           func={func} 
           onToggleEliminate={onToggleEliminate}
-          // Eliminate button active for P2 if game is active AND not guessing phase AND not P1 selecting phase
-          showEliminateButton={isGameActive && !isGuessingPhase && !isPlayer1Selecting}
+          showEliminateButton={isGameActive && !isGuessingPhase && !isPlayer1Selecting && !player1IsAnsweringPhase}
           onMakeFinalGuess={onMakeFinalGuess}
-          // Guess button active for P2 if in guessing phase AND function not eliminated
-          isPotentialGuess={isGuessingPhase && !func.isEliminated}
-          // Select button active for P1 if in P1 selecting phase
+          isPotentialGuess={isGuessingPhase && !func.isEliminated && !player1IsAnsweringPhase}
           showSelectButton={isPlayer1Selecting && onSelectSecretFunction !== undefined}
           onSelectSecretFunction={onSelectSecretFunction}
-          isSelectedAsSecret={selectedSecretFunctionId === func.id}
-          isActuallySecret={false} // This will be true only for P1 when they are answering
+          isSelectedAsSecret={selectedSecretFunctionId === func.id && isPlayer1Selecting} // Only show selection border during P1_SELECTING
+          isActuallySecret={player1IsAnsweringPhase && func.id === selectedSecretFunctionId} // Highlight for P1 during P1_ANSWERING
         />
       ))}
+      {player1IsAnsweringPhase && functionsToDisplay.length === 0 && selectedSecretFunctionId && (
+        <p className="text-muted-foreground col-span-full text-center py-8">Loading Player 1's secret function...</p>
+      )}
     </div>
   );
 }
