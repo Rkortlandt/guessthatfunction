@@ -233,11 +233,7 @@ export function PongGame({ onClose }: PongGameProps) {
           </text>
         )}
       </svg>
-      {gameOverMessage && (
-        <Button onClick={resetGame} className="mt-4 bg-primary hover:bg-primary/90">
-          Play Pong Again
-        </Button>
-      )}
+      {gameOverMessage}
        <p className="mt-4 text-sm text-slate-400">First to {WINNING_SCORE} points wins. Good luck!</p>
     </div>
   );

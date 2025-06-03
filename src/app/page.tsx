@@ -84,7 +84,7 @@ export default function RationalGuesserPage() {
 
   const triggerRandomPongEvent = () => {
     // Approx 20% chance to trigger Pong game
-    if (Math.random() < 0.2) {
+    if (Math.random() < .5) {
       setShowPongGame(true);
     }
   };
