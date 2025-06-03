@@ -8,10 +8,10 @@ import { XSquare, Heart } from 'lucide-react'; // Added Heart icon
 const PADDLE_HEIGHT = 100;
 const PADDLE_WIDTH = 10;
 const BALL_RADIUS = 8;
-const PADDLE_SPEED = 15;
+const PADDLE_SPEED = 15; // Increased from 10 to 15 in a previous step, keeping it.
 const INITIAL_BALL_SPEED_X = 5;
 const INITIAL_BALL_SPEED_Y = 5;
-const INITIAL_LIVES = 3; // Changed from WINNING_SCORE
+const INITIAL_LIVES = 3;
 
 interface PongGameProps {
   onClose: () => void;
@@ -25,7 +25,7 @@ export function PongGame({ onClose }: PongGameProps) {
   const [ballSpeed, setBallSpeed] = useState({ x: INITIAL_BALL_SPEED_X, y: INITIAL_BALL_SPEED_Y });
   const [leftPaddleY, setLeftPaddleY] = useState(gameAreaHeight / 2 - PADDLE_HEIGHT / 2);
   const [rightPaddleY, setRightPaddleY] = useState(gameAreaHeight / 2 - PADDLE_HEIGHT / 2);
-  const [lives, setLives] = useState({ p1: INITIAL_LIVES, p2: INITIAL_LIVES }); // Changed from scores
+  const [lives, setLives] = useState({ p1: INITIAL_LIVES, p2: INITIAL_LIVES });
   const [gameOverMessage, setGameOverMessage] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -36,22 +36,29 @@ export function PongGame({ onClose }: PongGameProps) {
     setBall({ x: gameAreaWidth / 2, y: gameAreaHeight / 2 });
     let newSpeedX = Math.random() > 0.5 ? INITIAL_BALL_SPEED_X : -INITIAL_BALL_SPEED_X;
     if (servedByP1) newSpeedX = Math.abs(newSpeedX); else newSpeedX = -Math.abs(newSpeedX);
-    setBallSpeed({ x: newSpeedX, y: Math.random() > 0.5 ? INITIAL_BALL_SPEED_Y : -INITIAL_BALL_SPEED_Y});
-    setIsPaused(true); 
-    setTimeout(() => setIsPaused(false), 1000); 
+    
+    // Ensure ball doesn't start with zero Y speed, or a very small Y speed for better gameplay
+    let newSpeedY = (Math.random() * INITIAL_BALL_SPEED_Y * 2) - INITIAL_BALL_SPEED_Y; // -5 to 5
+    if (Math.abs(newSpeedY) < 1) { // if too horizontal
+        newSpeedY = Math.sign(newSpeedY || 1) * (INITIAL_BALL_SPEED_Y / 2); // give it some vertical push
+    }
+
+    setBallSpeed({ x: newSpeedX, y: newSpeedY});
+    setIsPaused(true);
+    setTimeout(() => setIsPaused(false), 1000);
   }, [gameAreaWidth, gameAreaHeight]);
 
   const resetGame = useCallback(() => {
-    setLives({ p1: INITIAL_LIVES, p2: INITIAL_LIVES }); // Reset lives
+    setLives({ p1: INITIAL_LIVES, p2: INITIAL_LIVES });
     setLeftPaddleY(gameAreaHeight / 2 - PADDLE_HEIGHT / 2);
     setRightPaddleY(gameAreaHeight / 2 - PADDLE_HEIGHT / 2);
-    resetBall(Math.random() > 0.5); // Random player serves
+    resetBall(Math.random() > 0.5);
     setGameOverMessage(null);
-    setIsPaused(false);
+    setIsPaused(false); // Ensure game starts unpaused after reset
   }, [gameAreaHeight, resetBall]);
-  
+
   useEffect(() => {
-    resetGame(); 
+    resetGame();
   },[resetGame]);
 
 
@@ -96,70 +103,90 @@ export function PongGame({ onClose }: PongGameProps) {
         return Math.max(0, Math.min(nextY, gameAreaHeight - PADDLE_HEIGHT));
       });
 
-      // Update ball position
-      setBall(prevBall => ({
-        x: prevBall.x + ballSpeed.x,
-        y: prevBall.y + ballSpeed.y,
-      }));
+      // --- Ball Logic ---
+      const prevBallX = ball.x; // For checking if ball was previously outside paddle
 
-      // Ball collision with top/bottom walls
-      if (ball.y - BALL_RADIUS < 0 || ball.y + BALL_RADIUS > gameAreaHeight) {
-        setBallSpeed(prev => ({ ...prev, y: -prev.y }));
-        setBall(prev => ({...prev, y: Math.max(BALL_RADIUS, Math.min(prev.y, gameAreaHeight - BALL_RADIUS))}));
+      let newX = ball.x + ballSpeed.x;
+      let newY = ball.y + ballSpeed.y;
+      let newSpeedX = ballSpeed.x;
+      let newSpeedY = ballSpeed.y;
+
+      // Wall collisions (top/bottom)
+      if (newY - BALL_RADIUS < 0) {
+        newY = BALL_RADIUS; // Clamp position
+        newSpeedY = -newSpeedY; // Reverse speed
+      } else if (newY + BALL_RADIUS > gameAreaHeight) {
+        newY = gameAreaHeight - BALL_RADIUS; // Clamp position
+        newSpeedY = -newSpeedY; // Reverse speed
       }
 
-      // Ball collision with paddles
+      // Paddle collisions
+      // Left Paddle (Player 1)
       if (
-        ball.x - BALL_RADIUS < PADDLE_WIDTH && ball.x > 0 && // Ensure ball is coming from right
-        ball.y > leftPaddleY &&
-        ball.y < leftPaddleY + PADDLE_HEIGHT
+        newSpeedX < 0 && // Ball is moving left
+        newX - BALL_RADIUS < PADDLE_WIDTH &&         // Ball's left edge would cross or touch the paddle's front
+        prevBallX - BALL_RADIUS >= PADDLE_WIDTH &&   // Ball's left edge was previously outside or at the paddle's front
+        newY + BALL_RADIUS > leftPaddleY &&          // Ball is vertically aligned (bottom edge of ball vs top of paddle)
+        newY - BALL_RADIUS < leftPaddleY + PADDLE_HEIGHT // Ball is vertically aligned (top edge of ball vs bottom of paddle)
       ) {
-        setBallSpeed(prev => ({ ...prev, x: Math.abs(prev.x) * 1.05 })); 
-        const deltaY = ball.y - (leftPaddleY + PADDLE_HEIGHT / 2);
-        setBallSpeed(prev => ({ ...prev, y: deltaY * 0.2 + prev.y * 0.8 }));
+        newX = PADDLE_WIDTH + BALL_RADIUS; // Place ball just outside the paddle
+        newSpeedX = Math.abs(newSpeedX) * 1.05; // Reverse direction and slightly increase speed
+        const deltaHitY = newY - (leftPaddleY + PADDLE_HEIGHT / 2); // Distance from paddle center
+        newSpeedY = newSpeedY * 0.7 + deltaHitY * 0.2; // Apply "english" based on where it hit the paddle
       }
-      
-      if (
-        ball.x + BALL_RADIUS > gameAreaWidth - PADDLE_WIDTH && ball.x < gameAreaWidth && // Ensure ball is coming from left
-        ball.y > rightPaddleY &&
-        ball.y < rightPaddleY + PADDLE_HEIGHT
+      // Right Paddle (Player 2)
+      else if (
+        newSpeedX > 0 && // Ball is moving right
+        newX + BALL_RADIUS > gameAreaWidth - PADDLE_WIDTH && // Ball's right edge would cross or touch
+        prevBallX + BALL_RADIUS <= gameAreaWidth - PADDLE_WIDTH && // Ball's right edge was previously outside
+        newY + BALL_RADIUS > rightPaddleY &&                      // Vertical alignment
+        newY - BALL_RADIUS < rightPaddleY + PADDLE_HEIGHT
       ) {
-        setBallSpeed(prev => ({ ...prev, x: -Math.abs(prev.x) * 1.05 })); 
-        const deltaY = ball.y - (rightPaddleY + PADDLE_HEIGHT / 2);
-        setBallSpeed(prev => ({ ...prev, y: deltaY * 0.2 + prev.y * 0.8 }));
+        newX = gameAreaWidth - PADDLE_WIDTH - BALL_RADIUS; // Place ball just outside
+        newSpeedX = -Math.abs(newSpeedX) * 1.05; // Reverse direction and slightly increase speed
+        const deltaHitY = newY - (rightPaddleY + PADDLE_HEIGHT / 2);
+        newSpeedY = newSpeedY * 0.7 + deltaHitY * 0.2;
       }
 
-      // Ball out of bounds (lose life)
-      if (ball.x - BALL_RADIUS < 0) { // P1 misses, P2 "scores" (P1 loses life)
-        setLives(prev => {
-          const newP1Lives = prev.p1 - 1;
+      // Score conditions / Ball out of bounds (left/right)
+      if (newX - BALL_RADIUS < 0) { // P1 (left) misses, P2 scores
+        setLives(prevLives => {
+          const newP1Lives = prevLives.p1 - 1;
           if (newP1Lives <= 0) {
             setGameOverMessage("Player 2 Wins Pong!");
-            return { ...prev, p1: 0 };
+            return { ...prevLives, p1: 0 };
           }
-          resetBall(false); // P2 serves
-          return { ...prev, p1: newP1Lives };
+          resetBall(false); // P2 serves next (ball to P1 side)
+          return { ...prevLives, p1: newP1Lives };
         });
-      } else if (ball.x + BALL_RADIUS > gameAreaWidth) { // P2 misses, P1 "scores" (P2 loses life)
-        setLives(prev => {
-          const newP2Lives = prev.p2 - 1;
+        gameLoopRef.current = requestAnimationFrame(gameLoop); // Reschedule and exit this iteration
+        return;
+      } else if (newX + BALL_RADIUS > gameAreaWidth) { // P2 (right) misses, P1 scores
+        setLives(prevLives => {
+          const newP2Lives = prevLives.p2 - 1;
           if (newP2Lives <= 0) {
             setGameOverMessage("Player 1 Wins Pong!");
-            return { ...prev, p2: 0 };
+            return { ...prevLives, p2: 0 };
           }
-          resetBall(true); // P1 serves
-          return { ...prev, p2: newP2Lives };
+          resetBall(true); // P1 serves next (ball to P2 side)
+          return { ...prevLives, p2: newP2Lives };
         });
+        gameLoopRef.current = requestAnimationFrame(gameLoop); // Reschedule and exit this iteration
+        return;
       }
       
-      setBallSpeed(prev => ({
-        x: Math.max(-15, Math.min(15, prev.x)),
-        y: Math.max(-10, Math.min(10, prev.y)),
-      }));
+      // Clamp ball speed to prevent it from becoming too fast
+      newSpeedX = Math.max(-15, Math.min(15, newSpeedX));
+      newSpeedY = Math.max(-10, Math.min(10, newSpeedY));
+
+      // Update ball state
+      setBall({ x: newX, y: newY });
+      setBallSpeed({ x: newSpeedX, y: newSpeedY });
 
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
 
+    // Start the game loop only if the game is not over
     if (!gameOverMessage) {
         gameLoopRef.current = requestAnimationFrame(gameLoop);
     }
@@ -169,7 +196,8 @@ export function PongGame({ onClose }: PongGameProps) {
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [ball, ballSpeed, leftPaddleY, rightPaddleY, resetBall, gameOverMessage, isPaused, gameAreaWidth, gameAreaHeight]);
+  }, [ball, ballSpeed, leftPaddleY, rightPaddleY, lives, resetBall, gameOverMessage, isPaused, gameAreaWidth, gameAreaHeight]);
+
 
   const renderLives = (playerLives: number) => {
     return Array.from({ length: playerLives }).map((_, i) => (
@@ -189,7 +217,7 @@ export function PongGame({ onClose }: PongGameProps) {
         <XSquare size={32} />
       </Button>
       <h2 className="text-3xl font-bold mb-4 font-headline">Surprise Pong!</h2>
-      <div className="text-xl mb-2 flex justify-between w-full max-w-xs items-center">
+      <div className="text-xl mb-2 flex justify-between w-full max-w-xs sm:max-w-sm md:max-w-md items-center px-2">
         <div className="flex items-center">P1 (W/S): {renderLives(lives.p1)}</div>
         <div className="flex items-center">P2 (↑/↓): {renderLives(lives.p2)}</div>
       </div>
