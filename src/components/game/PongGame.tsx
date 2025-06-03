@@ -216,7 +216,7 @@ export function PongGame({ onClose }: PongGameProps) {
       >
         <XSquare size={32} />
       </Button>
-      <h2 className="text-3xl font-bold mb-4 font-headline">Surprise Pong!</h2>
+      <h2 className="text-2xl font-bold mb-4 font-headline">Surprise Pong!</h2>
       <div className="text-xl mb-2 flex justify-between w-full max-w-xs sm:max-w-sm md:max-w-md items-center px-2">
         <div className="flex items-center">P1 (W/S): {renderLives(lives.p1)}</div>
         <div className="flex items-center">P2 (↑/↓): {renderLives(lives.p2)}</div>
@@ -245,29 +245,14 @@ export function PongGame({ onClose }: PongGameProps) {
           fill="white"
         />
         <circle cx={ball.x} cy={ball.y} r={BALL_RADIUS} fill="white" />
-        {gameOverMessage && (
-          <g>
-            <rect x="0" y={gameAreaHeight / 2 - 50} width={gameAreaWidth} height="100" fill="rgba(0,0,0,0.7)" />
-            <text x={gameAreaWidth/2} y={gameAreaHeight/2 - 15} textAnchor="middle" fill="yellow" fontSize="30" fontWeight="bold">
-              {gameOverMessage}
-            </text>
-            <text x={gameAreaWidth/2} y={gameAreaHeight/2 + 20} textAnchor="middle" fill="white" fontSize="18">
-              Click Play Again or Close
-            </text>
-          </g>
-        )}
+        {gameOverMessage}
          {isPaused && !gameOverMessage && (
           <text x={gameAreaWidth/2} y={gameAreaHeight/2 - 30} textAnchor="middle" fill="cyan" fontSize="24">
             Get Ready...
           </text>
         )}
       </svg>
-      {gameOverMessage && (
-        <Button onClick={resetGame} className="mt-6" size="lg">
-          Play Again?
-        </Button>
-      )}
-       <p className="mt-4 text-sm text-slate-400">First player to make the opponent lose all lives wins!</p>
+      {gameOverMessage}
     </div>
   );
 }
