@@ -14,23 +14,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 type Player = 'P1' | 'P2';
 type GamePhase =
   | 'P1_SELECTING'
-  | 'P1_CONFIRM_SELECTION_DIALOG'
   | 'P2_SELECTING'
-  | 'P2_CONFIRM_SELECTION_DIALOG'
-  | 'P1_TURN_ACTION' // P1 can ask or guess
-  | 'P2_TURN_ANSWER_DIALOG' // P2 views P1's question and their own card to answer
-  | 'P1_TURN_EVALUATE' // P1 views P2's answer, eliminates functions, then back to P1_TURN_ACTION
-  | 'P2_TURN_ACTION' // P2 can ask or guess
-  | 'P1_TURN_ANSWER_DIALOG' // P1 views P2's question and their own card to answer
-  | 'P2_TURN_EVALUATE' // P2 views P1's answer, eliminates functions, then back to P2_TURN_ACTION
+  | 'P1_TURN_ACTION' 
+  | 'P2_TURN_ANSWER_DIALOG' 
+  | 'P1_TURN_EVALUATE' 
+  | 'P2_TURN_ACTION' 
+  | 'P1_TURN_ANSWER_DIALOG' 
+  | 'P2_TURN_EVALUATE' 
   | 'GAME_OVER';
 
-type GameWinner = Player | 'NONE' | null; // NONE for incorrect guess leading to opponent win
+type GameWinner = Player | 'NONE' | null; 
 
 export default function RationalGuesserPage() {
-  // Functions state for each player's perspective of the opponent's grid
-  const [p1GridFunctions, setP1GridFunctions] = useState<RationalFunction[]>([]); // P1's view of P2's possible cards
-  const [p2GridFunctions, setP2GridFunctions] = useState<RationalFunction[]>([]); // P2's view of P1's possible cards
+  const [p1GridFunctions, setP1GridFunctions] = useState<RationalFunction[]>([]); 
+  const [p2GridFunctions, setP2GridFunctions] = useState<RationalFunction[]>([]); 
 
   const [player1SecretFunction, setPlayer1SecretFunction] = useState<RationalFunction | null>(null);
   const [player2SecretFunction, setPlayer2SecretFunction] = useState<RationalFunction | null>(null);
@@ -42,9 +39,10 @@ export default function RationalGuesserPage() {
   const [currentPlayer, setCurrentPlayer] = useState<Player>('P1');
   const [gameWinner, setGameWinner] = useState<GameWinner>(null);
   
-  const [isLoading, setIsLoading] = useState(false); // For any async actions if needed in future
+  const [isLoading, setIsLoading] = useState(false); 
   const [showScreenCoverDialog, setShowScreenCoverDialog] = useState(false);
   const [screenCoverDialogContent, setScreenCoverDialogContent] = useState<{title: string, description: string, confirmAction?: () => void}>({title: '', description: ''});
+  const [isGuessingActive, setIsGuessingActive] = useState(false);
 
   const { toast } = useToast();
 
@@ -62,6 +60,7 @@ export default function RationalGuesserPage() {
     setGameWinner(null);
     setIsLoading(false);
     setShowScreenCoverDialog(false);
+    setIsGuessingActive(false);
     console.log("Game reset. Waiting for Player 1 to select a function.");
   }, []);
 
@@ -109,7 +108,6 @@ export default function RationalGuesserPage() {
         `You answered "${currentAnswer ? 'Yes' : 'No'}" to Player 2's question: "${currentQuestion}". Press confirm to hide the screen.`,
         () => {
           setGamePhase('P2_TURN_EVALUATE');
-          // setCurrentPlayer stays P2, as P2 will evaluate P1's answer
           toast({ title: "Player 1 Answered", description: "Player 2, evaluate the answer and eliminate functions." });
         }
        );
@@ -135,7 +133,6 @@ export default function RationalGuesserPage() {
         `You answered "${currentAnswer ? 'Yes' : 'No'}" to Player 1's question: "${currentQuestion}". Press confirm to hide the screen.`,
         () => {
           setGamePhase('P1_TURN_EVALUATE');
-          // setCurrentPlayer stays P1, as P1 will evaluate P2's answer
           toast({ title: "Player 2 Answered", description: "Player 1, evaluate the answer and eliminate functions." });
         }
        );
@@ -146,77 +143,76 @@ export default function RationalGuesserPage() {
 
   const handleAskQuestion = (question: string) => {
     setCurrentQuestion(question);
+    setIsGuessingActive(false); 
     if (currentPlayer === 'P1' && gamePhase === 'P1_TURN_ACTION') {
-      setCurrentAnswer(null); // Clear previous answer
+      setCurrentAnswer(null); 
       setGamePhase('P2_TURN_ANSWER_DIALOG');
-      // Current player remains P1 (asking), P2 will answer
       toast({ title: "P1 Asked", description: "Player 2, please answer the question. Player 1, look away!" });
     } else if (currentPlayer === 'P2' && gamePhase === 'P2_TURN_ACTION') {
-      setCurrentAnswer(null); // Clear previous answer
+      setCurrentAnswer(null); 
       setGamePhase('P1_TURN_ANSWER_DIALOG');
-      // Current player remains P2 (asking), P1 will answer
       toast({ title: "P2 Asked", description: "Player 1, please answer the question. Player 2, look away!" });
     }
   };
 
   const handleProvideAnswer = (answer: boolean) => {
-    // This is called when P1 or P2 clicks Yes/No in GameControls during their answer phase
-    // The actual state transition to EVALUATE happens after they click "Confirm and Hide"
     setCurrentAnswer(answer);
-    // No toast here, toast comes after "Confirm and Hide"
   };
 
   const handleToggleEliminate = (id: string) => {
+    if (isGuessingActive) return; // Don't eliminate if in guessing mode
+
     if (currentPlayer === 'P1' && (gamePhase === 'P1_TURN_ACTION' || gamePhase === 'P1_TURN_EVALUATE')) {
       setP1GridFunctions(prev => prev.map(f => f.id === id ? { ...f, isEliminated: !f.isEliminated } : f));
-      if (gamePhase === 'P1_TURN_EVALUATE') { // After evaluating, P1 can ask/guess again
+      if (gamePhase === 'P1_TURN_EVALUATE') { 
         setGamePhase('P1_TURN_ACTION');
         setCurrentQuestion('');
         setCurrentAnswer(null);
+        setIsGuessingActive(false);
       }
     } else if (currentPlayer === 'P2' && (gamePhase === 'P2_TURN_ACTION' || gamePhase === 'P2_TURN_EVALUATE')) {
       setP2GridFunctions(prev => prev.map(f => f.id === id ? { ...f, isEliminated: !f.isEliminated } : f));
-      if (gamePhase === 'P2_TURN_EVALUATE') { // After evaluating, P2 can ask/guess again
+      if (gamePhase === 'P2_TURN_EVALUATE') { 
         setGamePhase('P2_TURN_ACTION');
         setCurrentQuestion('');
         setCurrentAnswer(null);
+        setIsGuessingActive(false);
       }
     }
   };
 
   const handleMakeFinalGuess = (guessedId: string) => {
+    setIsGuessingActive(false);
     setGamePhase('GAME_OVER');
     if (currentPlayer === 'P1') {
       if (guessedId === player2SecretFunction?.id) {
         setGameWinner('P1');
         toast({ title: "Player 1 Wins!", description: "P1 correctly guessed P2's function!" });
       } else {
-        setGameWinner('P2'); // P1 guessed wrong, P2 wins
-        toast({ title: "Player 2 Wins!", description: `P1 guessed incorrectly! P2's function was ${player2SecretFunction?.equation}.`, variant: "destructive" });
+        setGameWinner('P2'); 
+        toast({ title: "Player 2 Wins!", description: `P1 guessed incorrectly! P2's secret function was ${player2SecretFunction?.equation}.`, variant: "destructive" });
       }
-    } else { // currentPlayer === 'P2'
+    } else { 
       if (guessedId === player1SecretFunction?.id) {
         setGameWinner('P2');
         toast({ title: "Player 2 Wins!", description: "P2 correctly guessed P1's function!" });
       } else {
-        setGameWinner('P1'); // P2 guessed wrong, P1 wins
-        toast({ title: "Player 1 Wins!", description: `P2 guessed incorrectly! P1's function was ${player1SecretFunction?.equation}.`, variant: "destructive" });
+        setGameWinner('P1'); 
+        toast({ title: "Player 1 Wins!", description: `P2 guessed incorrectly! P1's secret function was ${player1SecretFunction?.equation}.`, variant: "destructive" });
       }
     }
   };
 
-  const handleStartGuessing = () => {
-    if (currentPlayer === 'P1' && gamePhase === 'P1_TURN_ACTION') {
-      // Update phase to show guessing buttons on cards for P1
-    } else if (currentPlayer === 'P2' && gamePhase === 'P2_TURN_ACTION') {
-      // Update phase to show guessing buttons on cards for P2
+  const handleToggleGuessingMode = () => {
+    setIsGuessingActive(prev => !prev);
+    if (!isGuessingActive) {
+      toast({title: "Guess Mode Activated", description: `Player ${currentPlayer}, select the card you think is your opponent's secret function.`});
+    } else {
+      toast({title: "Guess Mode Deactivated", description: `Player ${currentPlayer}, you can now ask questions or eliminate functions.`});
     }
-    // For simplicity, we'll allow guessing directly from ACTION phase.
-    // The FunctionGrid will show guess buttons if onMakeFinalGuess is passed.
-    toast({title: "Make Your Guess", description: `Player ${currentPlayer}, select the card you think is your opponent's secret function.`})
   };
 
-  // Determine which functions to display and in what mode
+
   let functionsToDisplay: RationalFunction[] = [];
   let gridMode: 'selecting' | 'viewing_opponent_grid' | 'answering_own_card' | 'game_over' = 'selecting';
   let onSelectSecretFunctionForGrid: ((id: string) => void) | undefined = undefined;
@@ -228,28 +224,28 @@ export default function RationalGuesserPage() {
 
 
   if (gamePhase === 'P1_SELECTING') {
-    functionsToDisplay = INITIAL_FUNCTIONS; // Show all for P1 to select
+    functionsToDisplay = INITIAL_FUNCTIONS; 
     gridMode = 'selecting';
     onSelectSecretFunctionForGrid = handleSelectSecretFunction;
     selectedSecretFunctionIdForUI = player1SecretFunction?.id || null;
     gridKey = 'p1_selecting';
   } else if (gamePhase === 'P2_SELECTING') {
-    functionsToDisplay = INITIAL_FUNCTIONS; // Show all for P2 to select
+    functionsToDisplay = INITIAL_FUNCTIONS; 
     gridMode = 'selecting';
     onSelectSecretFunctionForGrid = handleSelectSecretFunction;
     selectedSecretFunctionIdForUI = player2SecretFunction?.id || null;
     gridKey = 'p2_selecting';
   } else if (gamePhase === 'P1_TURN_ACTION' || gamePhase === 'P1_TURN_EVALUATE') {
-    functionsToDisplay = p1GridFunctions; // P1's view of P2's cards
+    functionsToDisplay = p1GridFunctions; 
     gridMode = 'viewing_opponent_grid';
-    onToggleEliminateForGrid = handleToggleEliminate;
-    onMakeFinalGuessForGrid = handleMakeFinalGuess; // P1 can guess P2's card
+    onToggleEliminateForGrid = handleToggleEliminate; 
+    onMakeFinalGuessForGrid = handleMakeFinalGuess; 
     gridKey = 'p1_grid_view';
   } else if (gamePhase === 'P2_TURN_ACTION' || gamePhase === 'P2_TURN_EVALUATE') {
-    functionsToDisplay = p2GridFunctions; // P2's view of P1's cards
+    functionsToDisplay = p2GridFunctions; 
     gridMode = 'viewing_opponent_grid';
     onToggleEliminateForGrid = handleToggleEliminate;
-    onMakeFinalGuessForGrid = handleMakeFinalGuess; // P2 can guess P1's card
+    onMakeFinalGuessForGrid = handleMakeFinalGuess; 
     gridKey = 'p2_grid_view';
   } else if (gamePhase === 'P1_TURN_ANSWER_DIALOG') {
     functionsToDisplay = player1SecretFunction ? [player1SecretFunction] : [];
@@ -263,13 +259,13 @@ export default function RationalGuesserPage() {
     gridKey = 'p2_answering';
   } else if (gamePhase === 'GAME_OVER') {
     gridMode = 'game_over';
-    if (gameWinner === 'P1') { // P1 won, show P2's card
+    if (gameWinner === 'P1') { 
       functionsToDisplay = player2SecretFunction ? [player2SecretFunction] : INITIAL_FUNCTIONS;
       actualSecretFunctionForAnsweringUI = player2SecretFunction;
-    } else if (gameWinner === 'P2') { // P2 won, show P1's card
+    } else if (gameWinner === 'P2') { 
       functionsToDisplay = player1SecretFunction ? [player1SecretFunction] : INITIAL_FUNCTIONS;
       actualSecretFunctionForAnsweringUI = player1SecretFunction;
-    } else { // Should not happen if winner is set
+    } else { 
       functionsToDisplay = INITIAL_FUNCTIONS;
     }
     gridKey = 'game_over_view';
@@ -334,10 +330,9 @@ export default function RationalGuesserPage() {
             isLoading={isLoading}
             onAskQuestion={handleAskQuestion}
             onProvideAnswer={handleProvideAnswer}
-            onStartGuessing={handleStartGuessing} // For enabling guess mode
-            // For P1 confirming selection or answer
+            onToggleGuessingMode={handleToggleGuessingMode}
+            isGuessingActive={isGuessingActive}
             onPlayer1Confirm={handleP1ReadyToHideScreen}
-            // For P2 confirming selection or answer
             onPlayer2Confirm={handleP2ReadyToHideScreen}
             player1SecretFunctionId={player1SecretFunction?.id || null}
             player2SecretFunctionId={player2SecretFunction?.id || null}
@@ -366,10 +361,11 @@ export default function RationalGuesserPage() {
 
         <section className="lg:w-2/3 xl:w-3/4">
           <FunctionGrid
-            key={gridKey} // Force re-render when grid context changes drastically
+            key={gridKey} 
             functionsToDisplay={functionsToDisplay}
             gridMode={gridMode}
             currentPlayer={currentPlayer}
+            isGuessingActive={isGuessingActive}
             onSelectSecretFunction={onSelectSecretFunctionForGrid}
             onToggleEliminate={onToggleEliminateForGrid}
             onMakeFinalGuess={onMakeFinalGuessForGrid}
@@ -387,3 +383,5 @@ export default function RationalGuesserPage() {
     </div>
   );
 }
+
+    

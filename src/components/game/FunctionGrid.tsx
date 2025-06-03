@@ -8,18 +8,20 @@ type GridMode = 'selecting' | 'viewing_opponent_grid' | 'answering_own_card' | '
 interface FunctionGridProps {
   functionsToDisplay: RationalFunction[];
   gridMode: GridMode;
-  currentPlayer: Player; // To know who is interacting
+  currentPlayer: Player; 
+  isGuessingActive: boolean; 
   onSelectSecretFunction?: (id: string) => void;
   onToggleEliminate?: (id: string) => void;
   onMakeFinalGuess?: (id: string) => void;
-  selectedSecretFunctionIdForHighlight?: string | null; // For highlighting during selection phase
-  actualSecretFunctionForHighlight?: RationalFunction | null; // For highlighting the player's own card when answering
+  selectedSecretFunctionIdForHighlight?: string | null; 
+  actualSecretFunctionForHighlight?: RationalFunction | null; 
 }
 
 export function FunctionGrid({
   functionsToDisplay,
   gridMode,
   currentPlayer,
+  isGuessingActive,
   onSelectSecretFunction,
   onToggleEliminate,
   onMakeFinalGuess,
@@ -32,14 +34,11 @@ export function FunctionGrid({
   };
 
   const showEliminateButtonForCard = (func: RationalFunction): boolean => {
-    // Show eliminate if it's opponent's grid view and the function is not eliminated
-    // And eliminate action is available
-    return gridMode === 'viewing_opponent_grid' && !!onToggleEliminate;
+    return gridMode === 'viewing_opponent_grid' && !!onToggleEliminate && !isGuessingActive;
   };
   
   const showMakeGuessButtonForCard = (func: RationalFunction): boolean => {
-    // Show guess if it's opponent's grid view, function not eliminated, and action available
-    return gridMode === 'viewing_opponent_grid' && !func.isEliminated && !!onMakeFinalGuess;
+    return gridMode === 'viewing_opponent_grid' && !func.isEliminated && !!onMakeFinalGuess && isGuessingActive;
   };
 
   const isCardSelectedAsSecretForUI = (funcId: string): boolean => {
@@ -74,9 +73,7 @@ export function FunctionGrid({
           onMakeFinalGuess={onMakeFinalGuess}
 
           isActuallySecret={isCardActuallySecretForUI(func.id)}
-          // Pass gridMode to card if it needs to alter its own internal display significantly
-          // For example, to hide/show certain elements not covered by button logic
-          isEliminatedOverride={gridMode === 'game_over' ? false : func.isEliminated} // Don't show eliminated style in game_over
+          isEliminatedOverride={gridMode === 'game_over' ? false : func.isEliminated} 
         />
       ))}
       {(gridMode === 'answering_own_card' || gridMode === 'game_over') && functionsToDisplay.length === 0 && (
@@ -90,3 +87,5 @@ export function FunctionGrid({
     </div>
   );
 }
+
+    

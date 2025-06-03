@@ -3,16 +3,14 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Lightbulb, HelpCircle, CheckCircle, XCircle, ShieldQuestion, UserCheck, UserX, ShieldCheck, Mic, MessageSquare } from 'lucide-react';
+import { Loader2, Lightbulb, HelpCircle, CheckCircle, XCircle, ShieldQuestion, UserCheck, UserX, ShieldCheck, MessageSquare, ZapOff } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
 type Player = 'P1' | 'P2';
 type GamePhase =
   | 'P1_SELECTING'
-  | 'P1_CONFIRM_SELECTION_DIALOG'
   | 'P2_SELECTING'
-  | 'P2_CONFIRM_SELECTION_DIALOG'
   | 'P1_TURN_ACTION'
   | 'P2_TURN_ANSWER_DIALOG'
   | 'P1_TURN_EVALUATE'
@@ -25,17 +23,18 @@ interface GameControlsProps {
   gamePhase: GamePhase;
   currentPlayer: Player;
   currentQuestion: string | null;
-  currentAnswer: boolean | null; // The answer provided by the opponent
+  currentAnswer: boolean | null; 
   isLoading: boolean;
   onAskQuestion: (question: string) => void;
-  onProvideAnswer: (answer: boolean) => void; // Called when current player provides their answer
-  onStartGuessing: () => void; // To signal intent to guess
-  onPlayer1Confirm: () => void; // P1 confirms selection or answer
-  onPlayer2Confirm: () => void; // P2 confirms selection or answer
+  onProvideAnswer: (answer: boolean) => void; 
+  onToggleGuessingMode: () => void; 
+  isGuessingActive: boolean;
+  onPlayer1Confirm: () => void; 
+  onPlayer2Confirm: () => void; 
   player1SecretFunctionId: string | null;
   player2SecretFunctionId: string | null;
-  p1RemainingCount: number; // Number of functions P1 thinks P2 might have
-  p2RemainingCount: number; // Number of functions P2 thinks P1 might have
+  p1RemainingCount: number; 
+  p2RemainingCount: number; 
 }
 
 export function GameControls({
@@ -46,7 +45,8 @@ export function GameControls({
   isLoading,
   onAskQuestion,
   onProvideAnswer,
-  onStartGuessing,
+  onToggleGuessingMode,
+  isGuessingActive,
   onPlayer1Confirm,
   onPlayer2Confirm,
   player1SecretFunctionId,
@@ -58,21 +58,26 @@ export function GameControls({
   const [answerChoice, setAnswerChoice] = useState<'yes' | 'no' | ''>('');
 
   useEffect(() => {
-    // Reset question text when currentQuestion is cleared (e.g., after an answer is evaluated)
     if (!currentQuestion) {
       setQuestionText('');
     }
-    // Reset answer choice when currentAnswer is cleared or player changes
     if (currentAnswer === null) {
         setAnswerChoice('');
     }
   }, [currentQuestion, currentAnswer, currentPlayer]);
 
+  useEffect(() => {
+    // If not in an action phase for the current player, or if not the current player's turn to ask,
+    // reset question text. This helps clear stale text when turns change.
+    if (!((gamePhase === 'P1_TURN_ACTION' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ACTION' && currentPlayer === 'P2'))) {
+        setQuestionText('');
+    }
+  }, [gamePhase, currentPlayer]);
+
 
   const handleSubmitQuestion = () => {
-    if (!questionText.trim()) return;
+    if (!questionText.trim() || isGuessingActive) return;
     onAskQuestion(questionText);
-    // setQuestionText(''); // Question text will clear on next effect if currentQuestion clears
   };
 
   const handleAnswerChange = (value: 'yes' | 'no') => {
@@ -81,6 +86,9 @@ export function GameControls({
   };
 
   const getGamePhaseMessage = () => {
+    if (isGuessingActive) {
+      return `Player ${currentPlayer}: Guess Mode Active! Click a card on ${opponent}'s grid to make your final guess.`;
+    }
     switch (gamePhase) {
       case 'P1_SELECTING':
         return player1SecretFunctionId 
@@ -91,7 +99,7 @@ export function GameControls({
           ? "P2: Secret function selected! Click 'Confirm & Pass to P1' below."
           : "Player 2: Select your secret function. Player 1, please look away!";
       case 'P1_TURN_ACTION':
-        return "Player 1's Turn: Ask a yes/no question about P2's function, or make a final guess.";
+        return "Player 1's Turn: Ask a yes/no question about P2's function, or toggle Guess Mode.";
       case 'P2_TURN_ANSWER_DIALOG':
         return currentAnswer !== null
           ? "P2: Answer confirmed. Click 'Confirm & Pass to P1' below."
@@ -99,7 +107,7 @@ export function GameControls({
       case 'P1_TURN_EVALUATE':
         return `Player 1: P2 answered '${currentAnswer ? 'Yes' : 'No'}'. Eliminate functions, then ask or guess.`;
       case 'P2_TURN_ACTION':
-        return "Player 2's Turn: Ask a yes/no question about P1's function, or make a final guess.";
+        return "Player 2's Turn: Ask a yes/no question about P1's function, or toggle Guess Mode.";
       case 'P1_TURN_ANSWER_DIALOG':
         return currentAnswer !== null
           ? "P1: Answer confirmed. Click 'Confirm & Pass to P2' below."
@@ -119,8 +127,14 @@ export function GameControls({
   const showConfirmButton = 
     (gamePhase === 'P1_SELECTING' && !!player1SecretFunctionId && currentPlayer === 'P1') ||
     (gamePhase === 'P2_SELECTING' && !!player2SecretFunctionId && currentPlayer === 'P2') ||
-    (gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentAnswer !== null && currentPlayer === 'P2') || // P2 answering P1's Q
-    (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentAnswer !== null && currentPlayer === 'P1');   // P1 answering P2's Q
+    (gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentAnswer !== null && currentPlayer === 'P1') || // P1 answering P2's Q, then confirms
+    (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentAnswer !== null && currentPlayer === 'P2');   // P2 answering P1's Q, then confirms
+
+
+  const canAskQuestion = (gamePhase === 'P1_TURN_ACTION' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ACTION' && currentPlayer === 'P2');
+  const canToggleGuessMode = (gamePhase === 'P1_TURN_ACTION' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ACTION' && currentPlayer === 'P2');
+  const isAnsweringPhase = ((gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentPlayer === 'P2')) && currentQuestion && currentAnswer === null;
+  const isEvaluationPhase = ((gamePhase === 'P1_TURN_EVALUATE' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_EVALUATE' && currentPlayer === 'P2')) && currentAnswer !== null;
 
 
   return (
@@ -128,7 +142,7 @@ export function GameControls({
       <CardHeader>
         <CardTitle className="font-headline text-2xl flex items-center gap-2">
           <MessageSquare className="text-primary" />
-          Player Controls
+          Player Controls: {currentPlayer}
         </CardTitle>
         <CardDescription>
           {gamePhase !== 'GAME_OVER' && gamePhase !== 'P1_SELECTING' && gamePhase !== 'P2_SELECTING' && (
@@ -141,8 +155,7 @@ export function GameControls({
           <p className="font-semibold text-lg font-headline">{getGamePhaseMessage()}</p>
         </div>
 
-        {/* Asking Question (P1_TURN_ACTION or P2_TURN_ACTION) */}
-        {(gamePhase === 'P1_TURN_ACTION' && currentPlayer === 'P1' || gamePhase === 'P2_TURN_ACTION' && currentPlayer === 'P2') && (
+        {canAskQuestion && (
           <div className="space-y-3">
             <Label htmlFor="player-question">Your Question for Player {opponent}:</Label>
             <Textarea
@@ -151,12 +164,12 @@ export function GameControls({
               value={questionText}
               onChange={(e) => setQuestionText(e.target.value)}
               rows={3}
-              disabled={isLoading}
+              disabled={isLoading || isGuessingActive}
               aria-label={`Player ${currentPlayer}'s question for Player ${opponent}`}
             />
             <Button
               onClick={handleSubmitQuestion}
-              disabled={isLoading || !questionText.trim()}
+              disabled={isLoading || !questionText.trim() || isGuessingActive}
               className="w-full"
             >
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldQuestion className="mr-2 h-4 w-4" />}
@@ -165,8 +178,7 @@ export function GameControls({
           </div>
         )}
 
-        {/* Answering Question (P1_TURN_ANSWER_DIALOG or P2_TURN_ANSWER_DIALOG) */}
-        {((gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentPlayer === 'P2')) && currentQuestion && currentAnswer === null && (
+        {isAnsweringPhase && (
           <div className="space-y-4 p-4 border rounded-md bg-secondary/20">
             <p className="font-semibold">Player {currentPlayer === 'P1' ? 'P2' : 'P1'} asked:</p>
             <p className="text-muted-foreground italic">"{currentQuestion}"</p>
@@ -188,7 +200,6 @@ export function GameControls({
           </div>
         )}
         
-        {/* Confirm Button for various stages */}
         {showConfirmButton && (
           <div className="pt-4 border-t">
             <Button 
@@ -202,14 +213,13 @@ export function GameControls({
               }
             >
               <ShieldCheck className="mr-2 h-5 w-5" />
-              Confirm & Pass to Player {gamePhase.includes('P1_') ? 'P2' : 'P1'}
+              Confirm & Pass to Player { (gamePhase === 'P1_SELECTING' || gamePhase === 'P1_TURN_ANSWER_DIALOG') ? 'P2' : 'P1'}
             </Button>
           </div>
         )}
 
 
-        {/* Evaluating Opponent's Answer (P1_TURN_EVALUATE or P2_TURN_EVALUATE) */}
-        {((gamePhase === 'P1_TURN_EVALUATE' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_EVALUATE' && currentPlayer === 'P2')) && currentAnswer !== null && (
+        {isEvaluationPhase && (
           <Card className="bg-accent/10 border-accent">
             <CardHeader>
               <CardTitle className="text-lg font-headline flex items-center">
@@ -220,23 +230,22 @@ export function GameControls({
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Player {currentPlayer}: Use this clue to eliminate functions from Player {opponent}'s grid. 
-                Then ask another question or make a final guess. (Click on cards to eliminate/restore them)
+                Click on cards to eliminate/restore them. Then, ask another question or make a final guess.
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* Option to Make Final Guess (during P1_TURN_ACTION or P2_TURN_ACTION) */}
-        {((gamePhase === 'P1_TURN_ACTION' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ACTION' && currentPlayer === 'P2')) && (
+        {canToggleGuessMode && (
           <div className="pt-4 border-t">
             <Button 
-              onClick={onStartGuessing} 
-              variant="secondary" 
+              onClick={onToggleGuessingMode} 
+              variant={isGuessingActive ? "destructive" : "secondary"}
               className="w-full" 
               disabled={isLoading || remainingForCurrentPlayerToGuess <= 0}
             >
-              <HelpCircle className="mr-2 h-4 w-4" />
-              Make a Final Guess for Player {opponent}'s Function
+              {isGuessingActive ? <ZapOff className="mr-2 h-4 w-4" /> : <HelpCircle className="mr-2 h-4 w-4" />}
+              {isGuessingActive ? "Cancel Guess Mode" : `Make Final Guess (${remainingForCurrentPlayerToGuess} left)`}
             </Button>
           </div>
         )}
@@ -244,3 +253,5 @@ export function GameControls({
     </Card>
   );
 }
+
+    
