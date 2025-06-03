@@ -6,7 +6,7 @@ import { FunctionGrid } from '@/components/game/FunctionGrid';
 import { GameControls } from '@/components/game/GameControls';
 import { INITIAL_FUNCTIONS, type RationalFunction } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Users, Loader2, ShieldCheck } from 'lucide-react';
+import { RotateCcw, Users, Loader2, OctagonAlert } from 'lucide-react'; // Changed ShieldCheck to OctagonAlert
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -94,22 +94,22 @@ export default function RationalGuesserPage() {
   const handleP1ReadyToHideScreen = () => {
     if (gamePhase === 'P1_SELECTING' && player1SecretFunction) {
       openScreenCover(
-        "Player 1: Selection Complete!", 
-        "You've chosen your secret function. Press confirm to hide the screen and let Player 2 select their function.",
+        "Player 1: Selection Done", 
+        "You've chosen. Please pass the computer to Player 2 to select their function.",
         () => {
           setGamePhase('P2_SELECTING');
           setCurrentPlayer('P2');
-          toast({ title: "Player 1's Selection Hidden", description: "Player 2, it's your turn to select your secret function."});
+          toast({ title: "Player 2's Turn", description: "Player 2, it's your turn to select your secret function."});
         }
       );
     } else if (gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentAnswer !== null) {
        openScreenCover(
-        "Player 1: Answer Submitted!",
-        `You answered "${currentAnswer ? 'Yes' : 'No'}" to Player 2's question: "${currentQuestion}". Press confirm to hide the screen.`,
+        "Player 1: Answer Submitted",
+        `Your answer is recorded. Please pass the computer to Player 2 to see your answer and continue their turn.`,
         () => {
           setGamePhase('P2_TURN_EVALUATE');
           setCurrentPlayer('P2'); 
-          toast({ title: "Player 1 Answered", description: "Player 2, evaluate the answer and eliminate functions from Player 1's grid." });
+          toast({ title: "Player 2's Turn", description: "Player 2, evaluate the answer and continue your turn." });
         }
        );
     } else {
@@ -120,22 +120,22 @@ export default function RationalGuesserPage() {
   const handleP2ReadyToHideScreen = () => {
     if (gamePhase === 'P2_SELECTING' && player2SecretFunction) {
       openScreenCover(
-        "Player 2: Selection Complete!",
-        "You've chosen your secret function. Press confirm to hide the screen. Player 1 will start asking questions.",
+        "Player 2: Selection Done",
+        "You've chosen. Please pass the computer to Player 1 to start the game.",
         () => {
           setGamePhase('P1_TURN_ACTION');
           setCurrentPlayer('P1');
-          toast({ title: "Player 2's Selection Hidden", description: "Player 1, it's your turn to ask a question or make a guess." });
+          toast({ title: "Player 1's Turn", description: "Player 1, it's your turn to ask a question or make a guess." });
         }
       );
     } else if (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentAnswer !== null) {
        openScreenCover(
-        "Player 2: Answer Submitted!",
-        `You answered "${currentAnswer ? 'Yes' : 'No'}" to Player 1's question: "${currentQuestion}". Press confirm to hide the screen.`,
+        "Player 2: Answer Submitted",
+        `Your answer is recorded. Please pass the computer to Player 1 to see your answer and continue their turn.`,
         () => {
           setGamePhase('P1_TURN_EVALUATE');
           setCurrentPlayer('P1'); 
-          toast({ title: "Player 2 Answered", description: "Player 1, evaluate the answer and eliminate functions from Player 2's grid." });
+          toast({ title: "Player 1's Turn", description: "Player 1, evaluate the answer and continue your turn." });
         }
        );
     } else {
@@ -150,8 +150,8 @@ export default function RationalGuesserPage() {
 
     if (currentPlayer === 'P1' && gamePhase === 'P1_TURN_ACTION') {
       openScreenCover(
-        "Player 1: Question Sent",
-        `Your question "${question}" is ready for Player 2. Press confirm to hide your screen for Player 2 to answer.`,
+        "Player 1: Question Ready",
+        `Your question is ready for Player 2. Please pass the computer to Player 2 to answer.`,
         () => {
           setGamePhase('P2_TURN_ANSWER_DIALOG');
           setCurrentPlayer('P2'); 
@@ -160,8 +160,8 @@ export default function RationalGuesserPage() {
       );
     } else if (currentPlayer === 'P2' && gamePhase === 'P2_TURN_ACTION') {
       openScreenCover(
-        "Player 2: Question Sent",
-        `Your question "${question}" is ready for Player 1. Press confirm to hide your screen for Player 1 to answer.`,
+        "Player 2: Question Ready",
+        `Your question is ready for Player 1. Please pass the computer to Player 1 to answer.`,
         () => {
           setGamePhase('P1_TURN_ANSWER_DIALOG');
           setCurrentPlayer('P1');
@@ -179,7 +179,6 @@ export default function RationalGuesserPage() {
     if (isGuessingActive) return; 
 
     if (currentPlayer === 'P1' && (gamePhase === 'P1_TURN_ACTION' || gamePhase === 'P1_TURN_EVALUATE')) {
-      // P1 is eliminating from P2's grid (represented by p1GridFunctions)
       setP1GridFunctions(prev => prev.map(f => f.id === id ? { ...f, isEliminated: !f.isEliminated } : f));
       if (gamePhase === 'P1_TURN_EVALUATE') { 
         setGamePhase('P1_TURN_ACTION'); 
@@ -188,7 +187,6 @@ export default function RationalGuesserPage() {
         setIsGuessingActive(false); 
       }
     } else if (currentPlayer === 'P2' && (gamePhase === 'P2_TURN_ACTION' || gamePhase === 'P2_TURN_EVALUATE')) {
-      // P2 is eliminating from P1's grid (represented by p2GridFunctions)
       setP2GridFunctions(prev => prev.map(f => f.id === id ? { ...f, isEliminated: !f.isEliminated } : f));
       if (gamePhase === 'P2_TURN_EVALUATE') { 
         setGamePhase('P2_TURN_ACTION'); 
@@ -222,8 +220,8 @@ export default function RationalGuesserPage() {
   };
 
   const handleToggleGuessingMode = () => {
-    setIsGuessingActive(prev => !prev);
     const newGuessingState = !isGuessingActive;
+    setIsGuessingActive(newGuessingState);
     if (newGuessingState) {
       toast({title: "Guess Mode Activated", description: `Player ${currentPlayer}, select the card you think is your opponent's secret function.`});
     } else {
@@ -318,7 +316,7 @@ export default function RationalGuesserPage() {
       <DialogContent className="sm:max-w-md text-center">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline flex items-center justify-center">
-            <ShieldCheck className="w-8 h-8 mr-2 text-primary" />
+            <OctagonAlert className="w-8 h-8 mr-2 text-primary" /> {/* Changed icon */}
             {screenCoverDialogContent.title}
           </DialogTitle>
         </DialogHeader>
@@ -384,8 +382,8 @@ export default function RationalGuesserPage() {
 
                 {gameWinner === 'NONE' && "The game ended without a clear winner."}
                 <br />
-                {player1SecretFunction && `P1's secret function was: ${player1SecretFunction.equation}`}
-                {player2SecretFunction && `P2's secret function was: ${player2SecretFunction.equation}`}
+                {player1SecretFunction && `P1's secret function was: ${player1SecretFunction.equation}. `}
+                {player2SecretFunction && `P2's secret function was: ${player2SecretFunction.equation}.`}
                 {!player1SecretFunction && !player2SecretFunction && "No secret functions were selected."}
               </AlertDescription>
             </Alert>
