@@ -10,6 +10,7 @@ import { RotateCcw, Users, Loader2, OctagonAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { PongGame } from '@/components/game/PongGame'; // Import PongGame
 
 type Player = 'P1' | 'P2';
 type GamePhase =
@@ -43,6 +44,7 @@ export default function RationalGuesserPage() {
   const [showScreenCoverDialog, setShowScreenCoverDialog] = useState(false);
   const [screenCoverDialogContent, setScreenCoverDialogContent] = useState<{title: string, description: string, confirmAction?: () => void}>({title: '', description: ''});
   const [isGuessingActive, setIsGuessingActive] = useState(false);
+  const [showPongGame, setShowPongGame] = useState(false); // State for Pong game visibility
 
   const { toast } = useToast();
 
@@ -61,6 +63,7 @@ export default function RationalGuesserPage() {
     setIsLoading(false);
     setShowScreenCoverDialog(false);
     setIsGuessingActive(false);
+    setShowPongGame(false); // Reset Pong game on new game
     console.log("Game reset. Waiting for Player 1 to select a function.");
   }, []);
 
@@ -79,6 +82,13 @@ export default function RationalGuesserPage() {
     }
   };
 
+  const triggerRandomPongEvent = () => {
+    // Approx 20% chance to trigger Pong game
+    if (Math.random() < 0.2) {
+      setShowPongGame(true);
+    }
+  };
+
   const openScreenCover = (title: string, description: string, confirmAction?: () => void) => {
     setScreenCoverDialogContent({ title, description, confirmAction });
     setShowScreenCoverDialog(true);
@@ -89,6 +99,7 @@ export default function RationalGuesserPage() {
       screenCoverDialogContent.confirmAction();
     }
     setShowScreenCoverDialog(false);
+    triggerRandomPongEvent(); // Attempt to trigger Pong after screen cover is hidden
   };
 
   const handleP1ReadyToHideScreen = () => {
@@ -151,7 +162,7 @@ export default function RationalGuesserPage() {
     if (currentPlayer === 'P1' && gamePhase === 'P1_TURN_ACTION') {
       openScreenCover(
         "Player 1: Question Asked",
-        "Please pass the computer to Player 2.",
+        "Pass the computer to Player 2 to answer.",
         () => {
           setGamePhase('P2_TURN_ANSWER_DIALOG');
           setCurrentPlayer('P2');
@@ -161,7 +172,7 @@ export default function RationalGuesserPage() {
     } else if (currentPlayer === 'P2' && gamePhase === 'P2_TURN_ACTION') {
       openScreenCover(
         "Player 2: Question Asked",
-        "Please pass the computer to Player 1.",
+        "Pass the computer to Player 1 to answer.",
         () => {
           setGamePhase('P1_TURN_ANSWER_DIALOG');
           setCurrentPlayer('P1');
@@ -297,7 +308,7 @@ export default function RationalGuesserPage() {
         functionsToDisplay = [{...player1SecretFunction, isActuallySecret: true}];
         actualSecretFunctionForAnsweringUI = player1SecretFunction;
     } else {
-        functionsToDisplay = finalCards.length > 0 ? finalCards : INITIAL_FUNCTIONS.slice(0,2);
+        functionsToDisplay = finalCards.length > 0 ? finalCards : INITIAL_FUNCTIONS.slice(0,2).map(f => ({...f, isActuallySecret: true}));
     }
     gridKey = 'game_over_view';
   }
@@ -413,6 +424,14 @@ export default function RationalGuesserPage() {
       </main>
 
       <ScreenCoverDialogComponent />
+
+      {/* Pong Game Dialog */}
+      <Dialog open={showPongGame} onOpenChange={(open) => { if(!open) setShowPongGame(false)}}>
+        <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col items-center justify-center p-0">
+          <PongGame onClose={() => setShowPongGame(false)} />
+        </DialogContent>
+      </Dialog>
+
 
       <footer className="text-center py-8 mt-auto text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} Rational Guesser P2P. Two-player fun by Firebase Studio.</p>

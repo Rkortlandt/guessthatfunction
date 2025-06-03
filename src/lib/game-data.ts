@@ -19,7 +19,7 @@ export interface RationalFunction {
 }
 
 const generateImagePath = (sillyName: string) => {
-  const filename = sillyName.toLowerCase().replace(/\s+/g, '-') + '.png';
+  const filename = sillyName.toLowerCase().replace(/\s+/g, '-') + '.webp';
   return `/graphs/${filename}`;
 }
 
@@ -238,8 +238,8 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
   {
     id: 'f17',
     equation: 'y = (x + 1) / ((x - 1)(x - 2))',
-    sillyName: 'Multi-Asymptote Marty',
-    graphImageUrl: generateImagePath('Multi-Asymptote Marty'),
+    sillyName: 'Multi Asymptote Marty',
+    graphImageUrl: generateImagePath('Multi Asymptote Marty'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = 1', 'x = 2'],
