@@ -18,12 +18,17 @@ export interface RationalFunction {
   };
 }
 
+const generateImagePath = (sillyName: string) => {
+  const filename = sillyName.toLowerCase().replace(/\s+/g, '-') + '.png';
+  return `/graphs/${filename}`;
+}
+
 export const INITIAL_FUNCTIONS: RationalFunction[] = [
   {
     id: 'f1',
     equation: 'y = (x - 1) / (x + 2)',
     sillyName: 'Flippy Frankie',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Flippy Frankie'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = -2'],
@@ -37,7 +42,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f2',
     equation: 'y = x / (x^2 - 4)',
     sillyName: 'Wobbly Wendy',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Wobbly Wendy'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = 2', 'x = -2'],
@@ -51,7 +56,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f3',
     equation: 'y = (x^2 - 1) / (x - 1)',
     sillyName: 'Holey Harvey',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Holey Harvey'),
     isEliminated: false,
     properties: {
       holes: ['x = 1 (at y = 2)'],
@@ -64,7 +69,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f4',
     equation: 'y = 2 / (x - 3)',
     sillyName: 'Asymptotic Archie',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Asymptotic Archie'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = 3'],
@@ -77,7 +82,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f5',
     equation: 'y = (x^2 + 1) / x',
     sillyName: 'Slanty Sammy',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Slanty Sammy'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = 0'],
@@ -89,7 +94,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f6',
     equation: 'y = (3x - 6) / (x - 2)',
     sillyName: 'Constant Clyde',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Constant Clyde'),
     isEliminated: false,
     properties: {
       holes: ['x = 2 (at y = 3)'],
@@ -102,7 +107,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f7',
     equation: 'y = (x + 1) / (x - 1)',
     sillyName: 'Intersecting Izzy',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Intersecting Izzy'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = 1'],
@@ -116,7 +121,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f8',
     equation: 'y = (x^2 - 9) / (x + 3)',
     sillyName: 'Simplifying Sally',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Simplifying Sally'),
     isEliminated: false,
     properties: {
       holes: ['x = -3 (at y = -6)'],
@@ -129,7 +134,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f9',
     equation: 'y = 1 / x',
     sillyName: 'Reciprocal Rory',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Reciprocal Rory'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = 0'],
@@ -141,7 +146,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f10',
     equation: 'y = (x - 2) / ((x - 2)(x + 1))',
     sillyName: 'Cancelling Carl',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Cancelling Carl'),
     isEliminated: false,
     properties: {
       holes: ['x = 2 (at y = 1/3)'],
@@ -155,7 +160,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f11',
     equation: 'y = x^2 / (x - 1)',
     sillyName: 'Parabolic Penny',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Parabolic Penny'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = 1'],
@@ -169,7 +174,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f12',
     equation: 'y = (x - 1)^2 / (x - 1)',
     sillyName: 'Linear Lenny',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Linear Lenny'),
     isEliminated: false,
     properties: {
       holes: ['x = 1 (at y = 0)'],
@@ -182,7 +187,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f13',
     equation: 'y = 5 / (x^2 + 1)',
     sillyName: 'Bell-Curve Betty',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Bell-Curve Betty'),
     isEliminated: false,
     properties: {
       horizontalAsymptote: 'y = 0',
@@ -194,7 +199,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f14',
     equation: 'y = (2x + 4) / (x + 2)',
     sillyName: 'Steady Stevie',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Steady Stevie'),
     isEliminated: false,
     properties: {
       holes: ['x = -2 (at y = 2)'],
@@ -207,7 +212,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f15',
     equation: 'y = x / (x - 3)',
     sillyName: 'Dividing Donna',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Dividing Donna'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = 3'],
@@ -221,7 +226,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f16',
     equation: 'y = (x^2 - x - 6) / (x - 3)',
     sillyName: 'Polynomial Pete',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Polynomial Pete'),
     isEliminated: false,
     properties: {
       holes: ['x = 3 (at y = 5)'],
@@ -234,7 +239,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f17',
     equation: 'y = (x + 1) / ((x - 1)(x - 2))',
     sillyName: 'Multi-Asymptote Marty',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Multi-Asymptote Marty'),
     isEliminated: false,
     properties: {
       verticalAsymptotes: ['x = 1', 'x = 2'],
@@ -248,7 +253,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f18',
     equation: 'y = (3x^2) / (x^2 + 1)',
     sillyName: 'Plateau Paul',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Plateau Paul'),
     isEliminated: false,
     properties: {
       horizontalAsymptote: 'y = 3',
@@ -261,7 +266,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f19',
     equation: 'y = (x - 4) / (x^2 - 16)',
     sillyName: 'Vanishing Victor',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Vanishing Victor'),
     isEliminated: false,
     properties: {
       holes: ['x = 4 (at y = 1/8)'],
@@ -275,7 +280,7 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     id: 'f20',
     equation: 'y = (x^3 - 1) / (x - 1)',
     sillyName: 'Cubic Cassandra',
-    graphImageUrl: 'https://placehold.co/600x400.png',
+    graphImageUrl: generateImagePath('Cubic Cassandra'),
     isEliminated: false,
     properties: {
       holes: ['x = 1 (at y = 3)'],
@@ -284,3 +289,5 @@ export const INITIAL_FUNCTIONS: RationalFunction[] = [
     }
   },
 ];
+
+
