@@ -7,17 +7,17 @@ import { XSquare, Trophy } from 'lucide-react';
 
 // Game constants
 const GAME_AREA_WIDTH_TOTAL = 800; // Total width for both players
-const GAME_AREA_HEIGHT = 500;
+const GAME_AREA_HEIGHT = 250;
 const PLAYER_AREA_WIDTH = GAME_AREA_WIDTH_TOTAL / 2;
 
-const BASKET_WIDTH = 80;
+const BASKET_WIDTH = 40;
 const BASKET_HEIGHT = 20;
 const BASKET_Y_OFFSET = 30; // Distance from bottom
 const BASKET_SPEED = 15;
 
 const FRUIT_RADIUS = 15;
-const FRUIT_FALL_SPEED = 3;
-const FRUIT_SPAWN_INTERVAL = 1000; // ms
+const FRUIT_FALL_SPEED = 4;
+const FRUIT_SPAWN_INTERVAL = 250; // ms
 const FRUIT_TYPES = ['🍎', '🍌', '🍓', '🍇', '🍊', '🍍', '🍉'];
 
 const GAME_DURATION_SECONDS = 30;
@@ -142,7 +142,7 @@ export function FruitCatcherGame({ onClose }: FruitCatcherGameProps) {
       setFruits(prevFruits => {
         const updatedFruits = prevFruits.map(fruit => ({ ...fruit, y: fruit.y + FRUIT_FALL_SPEED }));
         const remainingFruits: Fruit[] = [];
-        
+
         for (const fruit of updatedFruits) {
           const basket = baskets[fruit.playerArea - 1];
           // Check for catch
@@ -201,58 +201,50 @@ export function FruitCatcherGame({ onClose }: FruitCatcherGameProps) {
         <g transform={getPlayerAreaTransform(0)}>
           <rect x="0" y="0" width={PLAYER_AREA_WIDTH} height={GAME_AREA_HEIGHT} fill="rgba(0,0,0,0.1)" />
           {/* Basket P1 */}
-          <rect
-            x={baskets[0].x}
-            y={baskets[0].y}
-            width={BASKET_WIDTH}
-            height={BASKET_HEIGHT}
-            fill="saddlebrown"
-            rx="5"
-          />
+          <text x={baskets[0].x} y={baskets[0].y} fontSize={BASKET_WIDTH} textAnchor="middle" dominantBaseline="central">
+            🧺
+          </text>
+
           {/* Fruits P1 */}
           {fruits.filter(f => f.playerArea === 1).map(fruit => (
             <text key={fruit.id} x={fruit.x} y={fruit.y} fontSize={FRUIT_RADIUS * 2} textAnchor="middle" dominantBaseline="central">
               {fruit.type}
             </text>
           ))}
-           <line x1={PLAYER_AREA_WIDTH} y1="0" x2={PLAYER_AREA_WIDTH} y2={GAME_AREA_HEIGHT} stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
+          <line x1={PLAYER_AREA_WIDTH} y1="0" x2={PLAYER_AREA_WIDTH} y2={GAME_AREA_HEIGHT} stroke="rgba(255,255,255,0.5)" strokeWidth="2" />
         </g>
 
         {/* Player 2 Area */}
         <g transform={getPlayerAreaTransform(1)}>
           <rect x="0" y="0" width={PLAYER_AREA_WIDTH} height={GAME_AREA_HEIGHT} fill="rgba(0,0,0,0.1)" />
           {/* Basket P2 */}
-          <rect
-            x={baskets[1].x}
-            y={baskets[1].y}
-            width={BASKET_WIDTH}
-            height={BASKET_HEIGHT}
-            fill="darkgoldenrod"
-            rx="5"
-          />
+          <text x={baskets[1].x} y={baskets[1].y} fontSize={BASKET_WIDTH} textAnchor="middle" dominantBaseline="central">
+            🧺
+          </text>
+
           {/* Fruits P2 */}
           {fruits.filter(f => f.playerArea === 2).map(fruit => (
-             <text key={fruit.id} x={fruit.x} y={fruit.y} fontSize={FRUIT_RADIUS * 2} textAnchor="middle" dominantBaseline="central">
+            <text key={fruit.id} x={fruit.x} y={fruit.y} fontSize={FRUIT_RADIUS * 2} textAnchor="middle" dominantBaseline="central">
               {fruit.type}
             </text>
           ))}
         </g>
-        
+
         {gameOver && (
           <g>
             <rect x="0" y={GAME_AREA_HEIGHT / 2 - 60} width={GAME_AREA_WIDTH_TOTAL} height="120" fill="rgba(0,0,0,0.7)" />
-            <text x={GAME_AREA_WIDTH_TOTAL/2} y={GAME_AREA_HEIGHT/2 - 20} textAnchor="middle" fill="yellow" fontSize="40" fontWeight="bold">
+            <text x={GAME_AREA_WIDTH_TOTAL / 2} y={GAME_AREA_HEIGHT / 2 - 20} textAnchor="middle" fill="yellow" fontSize="40" fontWeight="bold">
               Game Over!
             </text>
-            <text x={GAME_AREA_WIDTH_TOTAL/2} y={GAME_AREA_HEIGHT/2 + 25} textAnchor="middle" fill="white" fontSize="30" fontWeight="bold">
+            <text x={GAME_AREA_WIDTH_TOTAL / 2} y={GAME_AREA_HEIGHT / 2 + 25} textAnchor="middle" fill="white" fontSize="30" fontWeight="bold">
               {winner}
             </text>
           </g>
         )}
       </svg>
       {gameOver && (
-         <Button onClick={resetGame} className="mt-6" size="lg">
-            <Trophy className="mr-2"/> Play Again?
+        <Button onClick={resetGame} className="mt-6" size="lg">
+          <Trophy className="mr-2" /> Play Again?
         </Button>
       )}
       {!gameOver && <p className="mt-4 text-sm text-sky-200">Catch the fruits! Player 1 uses A/D, Player 2 uses Left/Right Arrows.</p>}
