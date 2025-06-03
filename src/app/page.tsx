@@ -10,7 +10,8 @@ import { RotateCcw, Users, Loader2, OctagonAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { PongGame } from '@/components/game/PongGame'; // Import PongGame
+import { PongGame } from '@/components/game/PongGame';
+import { FruitCatcherGame } from '@/components/game/FruitCatcherGame'; // Import FruitCatcherGame
 
 type Player = 'P1' | 'P2';
 type GamePhase =
@@ -44,7 +45,8 @@ export default function RationalGuesserPage() {
   const [showScreenCoverDialog, setShowScreenCoverDialog] = useState(false);
   const [screenCoverDialogContent, setScreenCoverDialogContent] = useState<{title: string, description: string, confirmAction?: () => void}>({title: '', description: ''});
   const [isGuessingActive, setIsGuessingActive] = useState(false);
-  const [showPongGame, setShowPongGame] = useState(false); // State for Pong game visibility
+  const [showPongGame, setShowPongGame] = useState(false);
+  const [showFruitCatcherGame, setShowFruitCatcherGame] = useState(false); // State for FruitCatcher game
 
   const { toast } = useToast();
 
@@ -63,7 +65,8 @@ export default function RationalGuesserPage() {
     setIsLoading(false);
     setShowScreenCoverDialog(false);
     setIsGuessingActive(false);
-    setShowPongGame(false); // Reset Pong game on new game
+    setShowPongGame(false);
+    setShowFruitCatcherGame(false); // Reset FruitCatcher game
     console.log("Game reset. Waiting for Player 1 to select a function.");
   }, []);
 
@@ -82,10 +85,16 @@ export default function RationalGuesserPage() {
     }
   };
 
-  const triggerRandomPongEvent = () => {
-    // Approx 20% chance to trigger Pong game
-    if (Math.random() < .5) {
-      setShowPongGame(true);
+  const triggerRandomMinigameEvent = () => {
+    const MINIGAME_CHANCE = 0.3; // 30% chance of any minigame
+    const PONG_VS_FRUITCATCHER_CHANCE = 0.5; // 50/50 split if minigame is triggered
+
+    if (Math.random() < MINIGAME_CHANCE) {
+      if (Math.random() < PONG_VS_FRUITCATCHER_CHANCE) {
+        setShowPongGame(true);
+      } else {
+        setShowFruitCatcherGame(true);
+      }
     }
   };
 
@@ -99,7 +108,7 @@ export default function RationalGuesserPage() {
       screenCoverDialogContent.confirmAction();
     }
     setShowScreenCoverDialog(false);
-    triggerRandomPongEvent(); // Attempt to trigger Pong after screen cover is hidden
+    triggerRandomMinigameEvent(); // Attempt to trigger a random minigame
   };
 
   const handleP1ReadyToHideScreen = () => {
@@ -161,8 +170,8 @@ export default function RationalGuesserPage() {
 
     if (currentPlayer === 'P1' && gamePhase === 'P1_TURN_ACTION') {
       openScreenCover(
-        "Player 1: Question Asked",
-        "Pass the computer to Player 2 to answer.",
+        "Player 1: Question Sent",
+        "Please pass the computer to Player 2 to answer.",
         () => {
           setGamePhase('P2_TURN_ANSWER_DIALOG');
           setCurrentPlayer('P2');
@@ -171,8 +180,8 @@ export default function RationalGuesserPage() {
       );
     } else if (currentPlayer === 'P2' && gamePhase === 'P2_TURN_ACTION') {
       openScreenCover(
-        "Player 2: Question Asked",
-        "Pass the computer to Player 1 to answer.",
+        "Player 2: Question Sent",
+        "Please pass the computer to Player 1 to answer.",
         () => {
           setGamePhase('P1_TURN_ANSWER_DIALOG');
           setCurrentPlayer('P1');
@@ -308,6 +317,7 @@ export default function RationalGuesserPage() {
         functionsToDisplay = [{...player1SecretFunction, isActuallySecret: true}];
         actualSecretFunctionForAnsweringUI = player1SecretFunction;
     } else {
+        // Fallback to show both if no clear winner scenario matches, or if it's a tie
         functionsToDisplay = finalCards.length > 0 ? finalCards : INITIAL_FUNCTIONS.slice(0,2).map(f => ({...f, isActuallySecret: true}));
     }
     gridKey = 'game_over_view';
@@ -425,10 +435,15 @@ export default function RationalGuesserPage() {
 
       <ScreenCoverDialogComponent />
 
-      {/* Pong Game Dialog */}
       <Dialog open={showPongGame} onOpenChange={(open) => { if(!open) setShowPongGame(false)}}>
         <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col items-center justify-center p-0">
           <PongGame onClose={() => setShowPongGame(false)} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showFruitCatcherGame} onOpenChange={(open) => { if(!open) setShowFruitCatcherGame(false)}}>
+        <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col items-center justify-center p-0">
+          <FruitCatcherGame onClose={() => setShowFruitCatcherGame(false)} />
         </DialogContent>
       </Dialog>
 
