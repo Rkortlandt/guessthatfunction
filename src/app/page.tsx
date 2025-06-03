@@ -93,7 +93,7 @@ export default function RationalGuesserPage() {
   };
 
   const triggerRandomMinigameEvent = () => {
-    const MINIGAME_CHANCE = 0.3; 
+    const MINIGAME_CHANCE = 0.5; 
     const PONG_VS_FRUITCATCHER_CHANCE = 0.5; 
 
     if (Math.random() < MINIGAME_CHANCE) {
