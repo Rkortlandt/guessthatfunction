@@ -1,6 +1,6 @@
 
 import type { RationalFunction } from '@/lib/game-data';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EyeOff, Eye, CheckSquare, Square, ShieldAlert, HelpCircleIcon } from 'lucide-react';
 import Image from 'next/image';
@@ -9,16 +9,16 @@ interface RationalFunctionCardProps {
   func: RationalFunction;
   showSelectButton?: boolean;
   onSelectSecretFunction?: (id: string) => void;
-  isSelectedAsSecret?: boolean; // Highlight for current selection process
+  isSelectedAsSecret?: boolean;
 
   showEliminateButton?: boolean;
   onToggleEliminate?: (id: string) => void;
-  
-  isPotentialGuess?: boolean; // True if this card can be guessed now
+
+  isPotentialGuess?: boolean;
   onMakeFinalGuess?: (id: string) => void;
-  
-  isActuallySecret?: boolean; // Highlight for player's OWN secret card when answering or game over
-  isEliminatedOverride?: boolean; // Optional override for isEliminated, e.g. for game over screen
+
+  isActuallySecret?: boolean;
+  isEliminatedOverride?: boolean;
 }
 
 export function RationalFunctionCard({
@@ -33,23 +33,19 @@ export function RationalFunctionCard({
   isActuallySecret,
   isEliminatedOverride,
 }: RationalFunctionCardProps) {
-  
-  const cardClassBase = 'transition-opacity duration-300 ease-in-out relative';
+
+  const cardClassBase = 'transition-opacity duration-300 ease-in-out relative flex flex-col';
   let cardClass = cardClassBase;
 
   const displayEliminated = typeof isEliminatedOverride === 'boolean' ? isEliminatedOverride : func.isEliminated;
 
   if (isActuallySecret) {
-    // Strongest highlight: This IS the secret card (either own card when answering, or revealed at game end)
     cardClass = `${cardClassBase} border-green-500 border-4 ring-4 ring-green-500/50 shadow-2xl`;
   } else if (isSelectedAsSecret && showSelectButton) {
-    // Highlight for selection process
     cardClass = `${cardClassBase} border-primary border-4 shadow-2xl`;
   } else if (displayEliminated && !showSelectButton && !isActuallySecret) {
-    // Standard eliminated card style
     cardClass = `${cardClassBase} opacity-40 hover:shadow-lg`;
   } else {
-    // Standard active card style
     cardClass = `${cardClassBase} hover:shadow-lg`;
   }
 
@@ -64,31 +60,33 @@ export function RationalFunctionCard({
       onSelectSecretFunction(func.id);
     }
   };
-  
+
   return (
     <Card className={cardClass} data-testid={`function-card-${func.id}`}>
       <CardHeader className="p-4">
-        <CardTitle className="font-headline text-lg">{func.equation}</CardTitle>
+        <CardTitle className="font-headline text-xl">{func.sillyName}</CardTitle>
+        <CardDescription className="text-xs text-muted-foreground">{func.equation}</CardDescription>
       </CardHeader>
-      <CardContent className="p-4 pt-0">
+      <CardContent className="p-4 pt-0 flex-grow">
         <div className="aspect-[3/2] w-full bg-muted rounded overflow-hidden mb-2">
           <Image
             src={func.graphImageUrl}
-            alt={`Graph of ${func.equation}`}
+            alt={`Graph of ${func.equation} (${func.sillyName})`}
             width={600}
             height={400}
             className="object-cover w-full h-full"
             data-ai-hint="graph plot"
+            priority={false} // only make high-priority images LCP candidates
           />
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 min-h-[40px]">
+      <CardFooter className="p-4 pt-0 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 min-h-[40px] mt-auto">
         {showSelectButton && onSelectSecretFunction && (
           <Button
             variant={isSelectedAsSecret ? "secondary" : "default"}
             size="sm"
             onClick={handleSelectClick}
-            aria-label={isSelectedAsSecret ? `Deselect ${func.equation} as secret` : `Select ${func.equation} as secret`}
+            aria-label={isSelectedAsSecret ? `Deselect ${func.sillyName} as secret` : `Select ${func.sillyName} as secret`}
             className="w-full sm:w-auto"
           >
             {isSelectedAsSecret ? <CheckSquare className="mr-2" /> : <Square className="mr-2" />}
@@ -100,12 +98,11 @@ export function RationalFunctionCard({
             variant="outline"
             size="sm"
             onClick={handleEliminateClick}
-            aria-label={displayEliminated ? `Restore function ${func.equation}` : `Eliminate function ${func.equation}`}
+            aria-label={displayEliminated ? `Restore function ${func.sillyName}` : `Eliminate function ${func.sillyName}`}
             className="w-full sm:w-auto"
-            // REMOVED: disabled={displayEliminated} 
           >
             {displayEliminated ? <Eye className="mr-2" /> : <EyeOff className="mr-2" />}
-            {displayEliminated ? 'Restore (View)' : 'Eliminate'}
+            {displayEliminated ? 'Restore' : 'Eliminate'}
           </Button>
         )}
          {isPotentialGuess && onMakeFinalGuess && !isActuallySecret && (

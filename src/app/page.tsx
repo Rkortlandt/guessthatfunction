@@ -6,7 +6,7 @@ import { FunctionGrid } from '@/components/game/FunctionGrid';
 import { GameControls } from '@/components/game/GameControls';
 import { INITIAL_FUNCTIONS, type RationalFunction } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Users, Loader2, OctagonAlert } from 'lucide-react'; // Changed ShieldCheck to OctagonAlert
+import { RotateCcw, Users, Loader2, OctagonAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -15,31 +15,31 @@ type Player = 'P1' | 'P2';
 type GamePhase =
   | 'P1_SELECTING'
   | 'P2_SELECTING'
-  | 'P1_TURN_ACTION' 
-  | 'P2_TURN_ANSWER_DIALOG' 
-  | 'P1_TURN_EVALUATE' 
-  | 'P2_TURN_ACTION' 
-  | 'P1_TURN_ANSWER_DIALOG' 
-  | 'P2_TURN_EVALUATE' 
+  | 'P1_TURN_ACTION'
+  | 'P2_TURN_ANSWER_DIALOG'
+  | 'P1_TURN_EVALUATE'
+  | 'P2_TURN_ACTION'
+  | 'P1_TURN_ANSWER_DIALOG'
+  | 'P2_TURN_EVALUATE'
   | 'GAME_OVER';
 
-type GameWinner = Player | 'NONE' | null; 
+type GameWinner = Player | 'NONE' | null;
 
 export default function RationalGuesserPage() {
-  const [p1GridFunctions, setP1GridFunctions] = useState<RationalFunction[]>([]); 
-  const [p2GridFunctions, setP2GridFunctions] = useState<RationalFunction[]>([]); 
+  const [p1GridFunctions, setP1GridFunctions] = useState<RationalFunction[]>([]);
+  const [p2GridFunctions, setP2GridFunctions] = useState<RationalFunction[]>([]);
 
   const [player1SecretFunction, setPlayer1SecretFunction] = useState<RationalFunction | null>(null);
   const [player2SecretFunction, setPlayer2SecretFunction] = useState<RationalFunction | null>(null);
-  
+
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [currentAnswer, setCurrentAnswer] = useState<boolean | null>(null);
-  
+
   const [gamePhase, setGamePhase] = useState<GamePhase>('P1_SELECTING');
   const [currentPlayer, setCurrentPlayer] = useState<Player>('P1');
   const [gameWinner, setGameWinner] = useState<GameWinner>(null);
-  
-  const [isLoading, setIsLoading] = useState(false); 
+
+  const [isLoading, setIsLoading] = useState(false);
   const [showScreenCoverDialog, setShowScreenCoverDialog] = useState(false);
   const [screenCoverDialogContent, setScreenCoverDialogContent] = useState<{title: string, description: string, confirmAction?: () => void}>({title: '', description: ''});
   const [isGuessingActive, setIsGuessingActive] = useState(false);
@@ -90,12 +90,12 @@ export default function RationalGuesserPage() {
     }
     setShowScreenCoverDialog(false);
   };
-  
+
   const handleP1ReadyToHideScreen = () => {
     if (gamePhase === 'P1_SELECTING' && player1SecretFunction) {
       openScreenCover(
-        "Player 1: Selection Done", 
-        "You've chosen. Please pass the computer to Player 2 to select their function.",
+        "Player 1: Selection Done",
+        "Please pass the computer to Player 2.",
         () => {
           setGamePhase('P2_SELECTING');
           setCurrentPlayer('P2');
@@ -105,10 +105,10 @@ export default function RationalGuesserPage() {
     } else if (gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentAnswer !== null) {
        openScreenCover(
         "Player 1: Answer Submitted",
-        `Your answer is recorded. Please pass the computer to Player 2 to see your answer and continue their turn.`,
+        "Please pass the computer to Player 2.",
         () => {
           setGamePhase('P2_TURN_EVALUATE');
-          setCurrentPlayer('P2'); 
+          setCurrentPlayer('P2');
           toast({ title: "Player 2's Turn", description: "Player 2, evaluate the answer and continue your turn." });
         }
        );
@@ -121,7 +121,7 @@ export default function RationalGuesserPage() {
     if (gamePhase === 'P2_SELECTING' && player2SecretFunction) {
       openScreenCover(
         "Player 2: Selection Done",
-        "You've chosen. Please pass the computer to Player 1 to start the game.",
+        "Please pass the computer to Player 1.",
         () => {
           setGamePhase('P1_TURN_ACTION');
           setCurrentPlayer('P1');
@@ -131,10 +131,10 @@ export default function RationalGuesserPage() {
     } else if (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentAnswer !== null) {
        openScreenCover(
         "Player 2: Answer Submitted",
-        `Your answer is recorded. Please pass the computer to Player 1 to see your answer and continue their turn.`,
+        "Please pass the computer to Player 1.",
         () => {
           setGamePhase('P1_TURN_EVALUATE');
-          setCurrentPlayer('P1'); 
+          setCurrentPlayer('P1');
           toast({ title: "Player 1's Turn", description: "Player 1, evaluate the answer and continue your turn." });
         }
        );
@@ -145,23 +145,23 @@ export default function RationalGuesserPage() {
 
   const handleAskQuestion = (question: string) => {
     setCurrentQuestion(question);
-    setIsGuessingActive(false); 
-    setCurrentAnswer(null); 
+    setIsGuessingActive(false);
+    setCurrentAnswer(null);
 
     if (currentPlayer === 'P1' && gamePhase === 'P1_TURN_ACTION') {
       openScreenCover(
-        "Player 1: Question Ready",
-        `Your question is ready for Player 2. Please pass the computer to Player 2 to answer.`,
+        "Player 1: Question Asked",
+        "Please pass the computer to Player 2.",
         () => {
           setGamePhase('P2_TURN_ANSWER_DIALOG');
-          setCurrentPlayer('P2'); 
+          setCurrentPlayer('P2');
           toast({ title: "Player 2's Turn to Answer", description: `Player 1 has asked: "${question}". Player 2, please provide your answer.` });
         }
       );
     } else if (currentPlayer === 'P2' && gamePhase === 'P2_TURN_ACTION') {
       openScreenCover(
-        "Player 2: Question Ready",
-        `Your question is ready for Player 1. Please pass the computer to Player 1 to answer.`,
+        "Player 2: Question Asked",
+        "Please pass the computer to Player 1.",
         () => {
           setGamePhase('P1_TURN_ANSWER_DIALOG');
           setCurrentPlayer('P1');
@@ -176,24 +176,28 @@ export default function RationalGuesserPage() {
   };
 
   const handleToggleEliminate = (id: string) => {
-    if (isGuessingActive) return; 
+    if (isGuessingActive) return;
 
     if (currentPlayer === 'P1' && (gamePhase === 'P1_TURN_ACTION' || gamePhase === 'P1_TURN_EVALUATE')) {
       setP1GridFunctions(prev => prev.map(f => f.id === id ? { ...f, isEliminated: !f.isEliminated } : f));
-      if (gamePhase === 'P1_TURN_EVALUATE') { 
-        setGamePhase('P1_TURN_ACTION'); 
-        setCurrentQuestion(''); 
-        setCurrentAnswer(null); 
-        setIsGuessingActive(false); 
-      }
     } else if (currentPlayer === 'P2' && (gamePhase === 'P2_TURN_ACTION' || gamePhase === 'P2_TURN_EVALUATE')) {
       setP2GridFunctions(prev => prev.map(f => f.id === id ? { ...f, isEliminated: !f.isEliminated } : f));
-      if (gamePhase === 'P2_TURN_EVALUATE') { 
-        setGamePhase('P2_TURN_ACTION'); 
-        setCurrentQuestion('');
-        setCurrentAnswer(null);
-        setIsGuessingActive(false);
-      }
+    }
+  };
+
+  const handleConfirmEvaluationAndProceed = () => {
+    if (currentPlayer === 'P1' && gamePhase === 'P1_TURN_EVALUATE') {
+      setGamePhase('P1_TURN_ACTION');
+      setCurrentQuestion('');
+      setCurrentAnswer(null);
+      setIsGuessingActive(false);
+      toast({ title: "Player 1's Turn", description: "Ask a question or make a guess." });
+    } else if (currentPlayer === 'P2' && gamePhase === 'P2_TURN_EVALUATE') {
+      setGamePhase('P2_TURN_ACTION');
+      setCurrentQuestion('');
+      setCurrentAnswer(null);
+      setIsGuessingActive(false);
+      toast({ title: "Player 2's Turn", description: "Ask a question or make a guess." });
     }
   };
 
@@ -203,18 +207,18 @@ export default function RationalGuesserPage() {
     if (currentPlayer === 'P1') {
       if (guessedId === player2SecretFunction?.id) {
         setGameWinner('P1');
-        toast({ title: "Player 1 Wins!", description: "P1 correctly guessed P2's function!" });
+        toast({ title: "Player 1 Wins!", description: `P1 correctly guessed P2's function: ${player2SecretFunction?.sillyName} (${player2SecretFunction?.equation})` });
       } else {
-        setGameWinner('P2'); 
-        toast({ title: "Player 2 Wins!", description: `P1 guessed incorrectly! P2's secret function was ${player2SecretFunction?.equation}.`, variant: "destructive" });
+        setGameWinner('P2');
+        toast({ title: "Player 2 Wins!", description: `P1 guessed incorrectly! P2's secret function was ${player2SecretFunction?.sillyName} (${player2SecretFunction?.equation}).`, variant: "destructive" });
       }
-    } else { 
+    } else {
       if (guessedId === player1SecretFunction?.id) {
         setGameWinner('P2');
-        toast({ title: "Player 2 Wins!", description: "P2 correctly guessed P1's function!" });
+        toast({ title: "Player 2 Wins!", description: `P2 correctly guessed P1's function: ${player1SecretFunction?.sillyName} (${player1SecretFunction?.equation})` });
       } else {
-        setGameWinner('P1'); 
-        toast({ title: "Player 1 Wins!", description: `P2 guessed incorrectly! P1's secret function was ${player1SecretFunction?.equation}.`, variant: "destructive" });
+        setGameWinner('P1');
+        toast({ title: "Player 1 Wins!", description: `P2 guessed incorrectly! P1's secret function was ${player1SecretFunction?.sillyName} (${player1SecretFunction?.equation}).`, variant: "destructive" });
       }
     }
   };
@@ -241,35 +245,35 @@ export default function RationalGuesserPage() {
 
 
   if (gamePhase === 'P1_SELECTING' && currentPlayer === 'P1') {
-    functionsToDisplay = INITIAL_FUNCTIONS; 
+    functionsToDisplay = INITIAL_FUNCTIONS;
     gridMode = 'selecting';
     onSelectSecretFunctionForGrid = handleSelectSecretFunction;
     selectedSecretFunctionIdForUI = player1SecretFunction?.id || null;
     gridKey = 'p1_selecting';
   } else if (gamePhase === 'P2_SELECTING' && currentPlayer === 'P2') {
-    functionsToDisplay = INITIAL_FUNCTIONS; 
+    functionsToDisplay = INITIAL_FUNCTIONS;
     gridMode = 'selecting';
     onSelectSecretFunctionForGrid = handleSelectSecretFunction;
     selectedSecretFunctionIdForUI = player2SecretFunction?.id || null;
     gridKey = 'p2_selecting';
   } else if ((gamePhase === 'P1_TURN_ACTION' || gamePhase === 'P1_TURN_EVALUATE') && currentPlayer === 'P1') {
-    functionsToDisplay = p1GridFunctions; 
-    gridMode = 'viewing_opponent_grid';
-    onToggleEliminateForGrid = handleToggleEliminate; 
-    onMakeFinalGuessForGrid = handleMakeFinalGuess; 
-    gridKey = 'p1_viewing_p2_grid';
-  } else if ((gamePhase === 'P2_TURN_ACTION' || gamePhase === 'P2_TURN_EVALUATE') && currentPlayer === 'P2') {
-    functionsToDisplay = p2GridFunctions; 
+    functionsToDisplay = p1GridFunctions;
     gridMode = 'viewing_opponent_grid';
     onToggleEliminateForGrid = handleToggleEliminate;
-    onMakeFinalGuessForGrid = handleMakeFinalGuess; 
+    onMakeFinalGuessForGrid = handleMakeFinalGuess;
+    gridKey = 'p1_viewing_p2_grid';
+  } else if ((gamePhase === 'P2_TURN_ACTION' || gamePhase === 'P2_TURN_EVALUATE') && currentPlayer === 'P2') {
+    functionsToDisplay = p2GridFunctions;
+    gridMode = 'viewing_opponent_grid';
+    onToggleEliminateForGrid = handleToggleEliminate;
+    onMakeFinalGuessForGrid = handleMakeFinalGuess;
     gridKey = 'p2_viewing_p1_grid';
-  } else if (gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentPlayer === 'P1') { 
+  } else if (gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentPlayer === 'P1') {
     functionsToDisplay = player1SecretFunction ? [player1SecretFunction] : [];
     gridMode = 'answering_own_card';
     actualSecretFunctionForAnsweringUI = player1SecretFunction;
     gridKey = 'p1_answering';
-  } else if (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentPlayer === 'P2') { 
+  } else if (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentPlayer === 'P2') {
     functionsToDisplay = player2SecretFunction ? [player2SecretFunction] : [];
     gridMode = 'answering_own_card';
     actualSecretFunctionForAnsweringUI = player2SecretFunction;
@@ -279,21 +283,21 @@ export default function RationalGuesserPage() {
     const finalCards = [];
     if (player1SecretFunction) finalCards.push({...player1SecretFunction, isActuallySecret: true});
     if (player2SecretFunction) finalCards.push({...player2SecretFunction, isActuallySecret: true});
-    
-    if (finalCards.length === 0 && player1SecretFunction) { 
+
+    if (finalCards.length === 0 && player1SecretFunction) {
         functionsToDisplay = player1SecretFunction ? [{...player1SecretFunction, isActuallySecret: true}] : [];
         actualSecretFunctionForAnsweringUI = player1SecretFunction;
-    } else if (finalCards.length === 0 && player2SecretFunction) { 
+    } else if (finalCards.length === 0 && player2SecretFunction) {
         functionsToDisplay = player2SecretFunction ? [{...player2SecretFunction, isActuallySecret: true}] : [];
         actualSecretFunctionForAnsweringUI = player2SecretFunction;
-    } else if (gameWinner === 'P1' && player2SecretFunction) { 
+    } else if (gameWinner === 'P1' && player2SecretFunction) {
         functionsToDisplay = [{...player2SecretFunction, isActuallySecret: true}];
         actualSecretFunctionForAnsweringUI = player2SecretFunction;
-    } else if (gameWinner === 'P2' && player1SecretFunction) { 
+    } else if (gameWinner === 'P2' && player1SecretFunction) {
         functionsToDisplay = [{...player1SecretFunction, isActuallySecret: true}];
         actualSecretFunctionForAnsweringUI = player1SecretFunction;
-    } else { 
-        functionsToDisplay = finalCards.length > 0 ? finalCards : INITIAL_FUNCTIONS.slice(0,2); 
+    } else {
+        functionsToDisplay = finalCards.length > 0 ? finalCards : INITIAL_FUNCTIONS.slice(0,2);
     }
     gridKey = 'game_over_view';
   }
@@ -303,20 +307,20 @@ export default function RationalGuesserPage() {
   const p2RemainingCount = p2GridFunctions.filter(f => !f.isEliminated).length;
 
 
-  if (INITIAL_FUNCTIONS.length === 0) { 
+  if (INITIAL_FUNCTIONS.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-  
+
   const ScreenCoverDialogComponent = () => (
     <Dialog open={showScreenCoverDialog} onOpenChange={(open) => { if(!open) setShowScreenCoverDialog(false)}}>
       <DialogContent className="sm:max-w-md text-center">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline flex items-center justify-center">
-            <OctagonAlert className="w-8 h-8 mr-2 text-primary" /> {/* Changed icon */}
+            <OctagonAlert className="w-8 h-8 mr-2 text-primary" />
             {screenCoverDialogContent.title}
           </DialogTitle>
         </DialogHeader>
@@ -361,10 +365,11 @@ export default function RationalGuesserPage() {
             isGuessingActive={isGuessingActive}
             onPlayer1Confirm={handleP1ReadyToHideScreen}
             onPlayer2Confirm={handleP2ReadyToHideScreen}
+            onConfirmEvaluationAndProceed={handleConfirmEvaluationAndProceed}
             player1SecretFunctionId={player1SecretFunction?.id || null}
             player2SecretFunctionId={player2SecretFunction?.id || null}
-            p1RemainingCount={p1RemainingCount} 
-            p2RemainingCount={p2RemainingCount} 
+            p1RemainingCount={p1RemainingCount}
+            p2RemainingCount={p2RemainingCount}
           />
            {gamePhase === 'GAME_OVER' && (
             <Alert variant={gameWinner === 'P1' ? 'default' : (gameWinner === 'P2' ? 'default' : 'destructive')} className="mt-4">
@@ -374,16 +379,16 @@ export default function RationalGuesserPage() {
                 {gameWinner === 'NONE' && "It's a Tie or Error!"}
               </AlertTitle>
               <AlertDescription>
-                {gameWinner === 'P1' && player2SecretFunction && `P1 correctly guessed P2's function: ${player2SecretFunction.equation}.`}
-                {gameWinner === 'P1' && player1SecretFunction && !player2SecretFunction && `P2 made an incorrect guess. P1's function was ${player1SecretFunction.equation}.`}
-                
-                {gameWinner === 'P2' && player1SecretFunction && `P2 correctly guessed P1's function: ${player1SecretFunction.equation}.`}
-                {gameWinner === 'P2' && player2SecretFunction && !player1SecretFunction && `P1 made an incorrect guess. P2's function was ${player2SecretFunction.equation}.`}
+                {gameWinner === 'P1' && player2SecretFunction && `P1 correctly guessed P2's function: ${player2SecretFunction.sillyName} (${player2SecretFunction.equation}).`}
+                {gameWinner === 'P1' && player1SecretFunction && !player2SecretFunction && `P2 made an incorrect guess. P1's function was ${player1SecretFunction.sillyName} (${player1SecretFunction.equation}).`}
+
+                {gameWinner === 'P2' && player1SecretFunction && `P2 correctly guessed P1's function: ${player1SecretFunction.sillyName} (${player1SecretFunction.equation}).`}
+                {gameWinner === 'P2' && player2SecretFunction && !player1SecretFunction && `P1 made an incorrect guess. P2's function was ${player2SecretFunction.sillyName} (${player2SecretFunction.equation}).`}
 
                 {gameWinner === 'NONE' && "The game ended without a clear winner."}
                 <br />
-                {player1SecretFunction && `P1's secret function was: ${player1SecretFunction.equation}. `}
-                {player2SecretFunction && `P2's secret function was: ${player2SecretFunction.equation}.`}
+                {player1SecretFunction && `P1's secret function was: ${player1SecretFunction.sillyName} (${player1SecretFunction.equation}). `}
+                {player2SecretFunction && `P2's secret function was: ${player2SecretFunction.sillyName} (${player2SecretFunction.equation}).`}
                 {!player1SecretFunction && !player2SecretFunction && "No secret functions were selected."}
               </AlertDescription>
             </Alert>
@@ -392,20 +397,21 @@ export default function RationalGuesserPage() {
 
         <section className="lg:w-2/3 xl:w-3/4">
           <FunctionGrid
-            key={gridKey} 
+            key={gridKey}
             functionsToDisplay={functionsToDisplay}
             gridMode={gridMode}
-            currentPlayer={currentPlayer} 
+            currentPlayer={currentPlayer}
             isGuessingActive={isGuessingActive}
             onSelectSecretFunction={onSelectSecretFunctionForGrid}
             onToggleEliminate={onToggleEliminateForGrid}
             onMakeFinalGuess={onMakeFinalGuessForGrid}
             selectedSecretFunctionIdForHighlight={selectedSecretFunctionIdForUI}
             actualSecretFunctionForHighlight={actualSecretFunctionForAnsweringUI}
+            gamePhase={gamePhase}
           />
         </section>
       </main>
-      
+
       <ScreenCoverDialogComponent />
 
       <footer className="text-center py-8 mt-auto text-muted-foreground">
@@ -414,4 +420,3 @@ export default function RationalGuesserPage() {
     </div>
   );
 }
-    
