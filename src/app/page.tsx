@@ -6,7 +6,7 @@ import { FunctionGrid } from '@/components/game/FunctionGrid';
 import { GameControls } from '@/components/game/GameControls';
 import { INITIAL_FUNCTIONS, type RationalFunction } from '@/lib/game-data';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Users, Loader2, OctagonAlert } from 'lucide-react';
+import { RotateCcw, Users, Loader2, OctagonAlert, Gamepad2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -26,6 +26,7 @@ type GamePhase =
   | 'GAME_OVER';
 
 type GameWinner = Player | 'NONE' | null;
+type MinigameType = 'pong' | 'fruitcatcher';
 
 export default function RationalGuesserPage() {
   const [p1GridFunctions, setP1GridFunctions] = useState<RationalFunction[]>([]);
@@ -45,8 +46,12 @@ export default function RationalGuesserPage() {
   const [showScreenCoverDialog, setShowScreenCoverDialog] = useState(false);
   const [screenCoverDialogContent, setScreenCoverDialogContent] = useState<{title: string, description: string, confirmAction?: () => void}>({title: '', description: ''});
   const [isGuessingActive, setIsGuessingActive] = useState(false);
+  
   const [showPongGame, setShowPongGame] = useState(false);
   const [showFruitCatcherGame, setShowFruitCatcherGame] = useState(false);
+  const [pendingMinigame, setPendingMinigame] = useState<MinigameType | null>(null);
+  const [showMinigameInterstitial, setShowMinigameInterstitial] = useState(false);
+
 
   const { toast } = useToast();
 
@@ -67,6 +72,8 @@ export default function RationalGuesserPage() {
     setIsGuessingActive(false);
     setShowPongGame(false);
     setShowFruitCatcherGame(false);
+    setPendingMinigame(null);
+    setShowMinigameInterstitial(false);
     console.log("Game reset. Waiting for Player 1 to select a function.");
   }, []);
 
@@ -91,12 +98,24 @@ export default function RationalGuesserPage() {
 
     if (Math.random() < MINIGAME_CHANCE) {
       if (Math.random() < PONG_VS_FRUITCATCHER_CHANCE) {
-        setShowPongGame(true);
+        setPendingMinigame('pong');
       } else {
-        setShowFruitCatcherGame(true);
+        setPendingMinigame('fruitcatcher');
       }
+      setShowMinigameInterstitial(true);
     }
   };
+  
+  const handleStartPendingMinigame = () => {
+    setShowMinigameInterstitial(false);
+    if (pendingMinigame === 'pong') {
+      setShowPongGame(true);
+    } else if (pendingMinigame === 'fruitcatcher') {
+      setShowFruitCatcherGame(true);
+    }
+    setPendingMinigame(null);
+  };
+
 
   const openScreenCover = (title: string, description: string, confirmAction?: () => void) => {
     setScreenCoverDialogContent({ title, description, confirmAction });
@@ -108,7 +127,11 @@ export default function RationalGuesserPage() {
       screenCoverDialogContent.confirmAction();
     }
     setShowScreenCoverDialog(false);
-    triggerRandomMinigameEvent(); 
+    
+    // Only trigger minigame if not already in a minigame or its interstitial
+    if (!showPongGame && !showFruitCatcherGame && !showMinigameInterstitial && !pendingMinigame) {
+      triggerRandomMinigameEvent();
+    }
   };
 
   const handleP1ReadyToHideScreen = () => {
@@ -174,7 +197,7 @@ export default function RationalGuesserPage() {
         "Please pass the computer to Player 2 to answer.",
         () => {
           setGamePhase('P2_TURN_ANSWER_DIALOG');
-          setCurrentPlayer('P2'); // Switch current player
+          setCurrentPlayer('P2'); 
           toast({ title: "Player 2's Turn to Answer", description: `Player 2, please provide your answer to: "${question}"` });
         }
       );
@@ -184,7 +207,7 @@ export default function RationalGuesserPage() {
         "Please pass the computer to Player 1 to answer.",
         () => {
           setGamePhase('P1_TURN_ANSWER_DIALOG');
-          setCurrentPlayer('P1'); // Switch current player
+          setCurrentPlayer('P1'); 
           toast({ title: "Player 1's Turn to Answer", description: `Player 1, please provide your answer to: "${question}"` });
         }
       );
@@ -229,7 +252,7 @@ export default function RationalGuesserPage() {
         setGameWinner('P2');
         toast({ title: "Player 2 Wins!", description: `P1 guessed incorrectly! P2's secret function was ${player2SecretFunction?.sillyName} (${player2SecretFunction?.equation}).`, variant: "destructive" });
       }
-    } else { // Current player is P2
+    } else { 
       if (guessedId === player1SecretFunction?.id) {
         setGameWinner('P2');
         toast({ title: "Player 2 Wins!", description: `P2 correctly guessed P1's function: ${player1SecretFunction?.sillyName} (${player1SecretFunction?.equation})` });
@@ -353,6 +376,28 @@ export default function RationalGuesserPage() {
     </Dialog>
   );
 
+  const MinigameInterstitialDialogComponent = () => (
+    <Dialog open={showMinigameInterstitial} onOpenChange={(open) => { if(!open) setShowMinigameInterstitial(false)}}>
+        <DialogContent className="sm:max-w-md text-center">
+            <DialogHeader>
+                <DialogTitle className="text-2xl font-headline flex items-center justify-center">
+                    <Gamepad2 className="w-8 h-8 mr-2 text-primary" />
+                    Minigame Challenge!
+                </DialogTitle>
+            </DialogHeader>
+            <DialogDescription className="my-4 text-lg">
+                A 2-player minigame is about to start! Get ready.
+            </DialogDescription>
+            <DialogFooter className="sm:justify-center">
+                <Button onClick={handleStartPendingMinigame} size="lg">
+                    Start Minigame
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+  );
+
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground p-4 md:p-8">
       <header className="mb-8">
@@ -430,6 +475,8 @@ export default function RationalGuesserPage() {
       </main>
 
       <ScreenCoverDialogComponent />
+      <MinigameInterstitialDialogComponent />
+
 
       <Dialog open={showPongGame} onOpenChange={(open) => { if(!open) setShowPongGame(false)}}>
         <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col items-center justify-center p-0">
@@ -458,3 +505,4 @@ export default function RationalGuesserPage() {
     </div>
   );
 }
+
