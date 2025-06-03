@@ -64,15 +64,12 @@ export function GameControls({
     if (currentAnswer === null) {
         setAnswerChoice('');
     }
-  }, [currentQuestion, currentAnswer, currentPlayer]);
-
-  useEffect(() => {
-    // If not in an action phase for the current player, or if not the current player's turn to ask,
+     // If not in an action phase for the current player, or if not the current player's turn to ask,
     // reset question text. This helps clear stale text when turns change.
     if (!((gamePhase === 'P1_TURN_ACTION' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ACTION' && currentPlayer === 'P2'))) {
         setQuestionText('');
     }
-  }, [gamePhase, currentPlayer]);
+  }, [currentQuestion, currentAnswer, gamePhase, currentPlayer]);
 
 
   const handleSubmitQuestion = () => {
@@ -100,18 +97,18 @@ export function GameControls({
           : "Player 2: Select your secret function. Player 1, please look away!";
       case 'P1_TURN_ACTION':
         return "Player 1's Turn: Ask a yes/no question about P2's function, or toggle Guess Mode.";
-      case 'P2_TURN_ANSWER_DIALOG':
+      case 'P2_TURN_ANSWER_DIALOG': // P2 is answering
         return currentAnswer !== null
           ? "P2: Answer confirmed. Click 'Confirm & Pass to P1' below."
-          : "Player 2: Answer P1's question. P1, please look away!";
+          : `Player 2: Answer P1's question: "${currentQuestion}". P1, please look away!`;
       case 'P1_TURN_EVALUATE':
         return `Player 1: P2 answered '${currentAnswer ? 'Yes' : 'No'}'. Eliminate functions, then ask or guess.`;
       case 'P2_TURN_ACTION':
         return "Player 2's Turn: Ask a yes/no question about P1's function, or toggle Guess Mode.";
-      case 'P1_TURN_ANSWER_DIALOG':
+      case 'P1_TURN_ANSWER_DIALOG': // P1 is answering
         return currentAnswer !== null
           ? "P1: Answer confirmed. Click 'Confirm & Pass to P2' below."
-          : "Player 1: Answer P2's question. P2, please look away!";
+          : `Player 1: Answer P2's question: "${currentQuestion}". P2, please look away!`;
       case 'P2_TURN_EVALUATE':
         return `Player 2: P1 answered '${currentAnswer ? 'Yes' : 'No'}'. Eliminate functions, then ask or guess.`;
       case 'GAME_OVER':
@@ -127,12 +124,13 @@ export function GameControls({
   const showConfirmButton = 
     (gamePhase === 'P1_SELECTING' && !!player1SecretFunctionId && currentPlayer === 'P1') ||
     (gamePhase === 'P2_SELECTING' && !!player2SecretFunctionId && currentPlayer === 'P2') ||
-    (gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentAnswer !== null && currentPlayer === 'P1') || // P1 answering P2's Q, then confirms
-    (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentAnswer !== null && currentPlayer === 'P2');   // P2 answering P1's Q, then confirms
+    (gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentAnswer !== null && currentPlayer === 'P1') || 
+    (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentAnswer !== null && currentPlayer === 'P2');
 
 
   const canAskQuestion = (gamePhase === 'P1_TURN_ACTION' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ACTION' && currentPlayer === 'P2');
   const canToggleGuessMode = (gamePhase === 'P1_TURN_ACTION' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ACTION' && currentPlayer === 'P2');
+  // Answering phase is when it's the current player's turn to answer, a question exists, and no answer has been given yet for this question
   const isAnsweringPhase = ((gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_ANSWER_DIALOG' && currentPlayer === 'P2')) && currentQuestion && currentAnswer === null;
   const isEvaluationPhase = ((gamePhase === 'P1_TURN_EVALUATE' && currentPlayer === 'P1') || (gamePhase === 'P2_TURN_EVALUATE' && currentPlayer === 'P2')) && currentAnswer !== null;
 
@@ -213,7 +211,7 @@ export function GameControls({
               }
             >
               <ShieldCheck className="mr-2 h-5 w-5" />
-              Confirm & Pass to Player { (gamePhase === 'P1_SELECTING' || gamePhase === 'P1_TURN_ANSWER_DIALOG') ? 'P2' : 'P1'}
+              Confirm & Pass to Player { (gamePhase === 'P1_SELECTING' || (gamePhase === 'P1_TURN_ANSWER_DIALOG' && currentPlayer === 'P1')) ? 'P2' : 'P1'}
             </Button>
           </div>
         )}
@@ -253,5 +251,3 @@ export function GameControls({
     </Card>
   );
 }
-
-    
