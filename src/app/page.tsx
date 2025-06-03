@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { PongGame } from '@/components/game/PongGame';
-import { FruitCatcherGame } from '@/components/game/FruitCatcherGame'; // Import FruitCatcherGame
+import { FruitCatcherGame } from '@/components/game/FruitCatcherGame';
 
 type Player = 'P1' | 'P2';
 type GamePhase =
@@ -46,7 +46,7 @@ export default function RationalGuesserPage() {
   const [screenCoverDialogContent, setScreenCoverDialogContent] = useState<{title: string, description: string, confirmAction?: () => void}>({title: '', description: ''});
   const [isGuessingActive, setIsGuessingActive] = useState(false);
   const [showPongGame, setShowPongGame] = useState(false);
-  const [showFruitCatcherGame, setShowFruitCatcherGame] = useState(false); // State for FruitCatcher game
+  const [showFruitCatcherGame, setShowFruitCatcherGame] = useState(false);
 
   const { toast } = useToast();
 
@@ -66,7 +66,7 @@ export default function RationalGuesserPage() {
     setShowScreenCoverDialog(false);
     setIsGuessingActive(false);
     setShowPongGame(false);
-    setShowFruitCatcherGame(false); // Reset FruitCatcher game
+    setShowFruitCatcherGame(false);
     console.log("Game reset. Waiting for Player 1 to select a function.");
   }, []);
 
@@ -86,8 +86,8 @@ export default function RationalGuesserPage() {
   };
 
   const triggerRandomMinigameEvent = () => {
-    const MINIGAME_CHANCE = 0.3; // 30% chance of any minigame
-    const PONG_VS_FRUITCATCHER_CHANCE = 0.5; // 50/50 split if minigame is triggered
+    const MINIGAME_CHANCE = 0.3; 
+    const PONG_VS_FRUITCATCHER_CHANCE = 0.5; 
 
     if (Math.random() < MINIGAME_CHANCE) {
       if (Math.random() < PONG_VS_FRUITCATCHER_CHANCE) {
@@ -108,7 +108,7 @@ export default function RationalGuesserPage() {
       screenCoverDialogContent.confirmAction();
     }
     setShowScreenCoverDialog(false);
-    triggerRandomMinigameEvent(); // Attempt to trigger a random minigame
+    triggerRandomMinigameEvent(); 
   };
 
   const handleP1ReadyToHideScreen = () => {
@@ -174,8 +174,8 @@ export default function RationalGuesserPage() {
         "Please pass the computer to Player 2 to answer.",
         () => {
           setGamePhase('P2_TURN_ANSWER_DIALOG');
-          setCurrentPlayer('P2');
-          toast({ title: "Player 2's Turn to Answer", description: `Player 1 has asked: "${question}". Player 2, please provide your answer.` });
+          setCurrentPlayer('P2'); // Switch current player
+          toast({ title: "Player 2's Turn to Answer", description: `Player 2, please provide your answer to: "${question}"` });
         }
       );
     } else if (currentPlayer === 'P2' && gamePhase === 'P2_TURN_ACTION') {
@@ -184,8 +184,8 @@ export default function RationalGuesserPage() {
         "Please pass the computer to Player 1 to answer.",
         () => {
           setGamePhase('P1_TURN_ANSWER_DIALOG');
-          setCurrentPlayer('P1');
-          toast({ title: "Player 1's Turn to Answer", description: `Player 2 has asked: "${question}". Player 1, please provide your answer.` });
+          setCurrentPlayer('P1'); // Switch current player
+          toast({ title: "Player 1's Turn to Answer", description: `Player 1, please provide your answer to: "${question}"` });
         }
       );
     }
@@ -206,17 +206,14 @@ export default function RationalGuesserPage() {
   };
 
   const handleConfirmEvaluationAndProceed = () => {
+    setCurrentQuestion('');
+    setCurrentAnswer(null);
+    setIsGuessingActive(false);
     if (currentPlayer === 'P1' && gamePhase === 'P1_TURN_EVALUATE') {
       setGamePhase('P1_TURN_ACTION');
-      setCurrentQuestion('');
-      setCurrentAnswer(null);
-      setIsGuessingActive(false);
       toast({ title: "Player 1's Turn", description: "Ask a question or make a guess." });
     } else if (currentPlayer === 'P2' && gamePhase === 'P2_TURN_EVALUATE') {
       setGamePhase('P2_TURN_ACTION');
-      setCurrentQuestion('');
-      setCurrentAnswer(null);
-      setIsGuessingActive(false);
       toast({ title: "Player 2's Turn", description: "Ask a question or make a guess." });
     }
   };
@@ -232,7 +229,7 @@ export default function RationalGuesserPage() {
         setGameWinner('P2');
         toast({ title: "Player 2 Wins!", description: `P1 guessed incorrectly! P2's secret function was ${player2SecretFunction?.sillyName} (${player2SecretFunction?.equation}).`, variant: "destructive" });
       }
-    } else {
+    } else { // Current player is P2
       if (guessedId === player1SecretFunction?.id) {
         setGameWinner('P2');
         toast({ title: "Player 2 Wins!", description: `P2 correctly guessed P1's function: ${player1SecretFunction?.sillyName} (${player1SecretFunction?.equation})` });
@@ -317,7 +314,6 @@ export default function RationalGuesserPage() {
         functionsToDisplay = [{...player1SecretFunction, isActuallySecret: true}];
         actualSecretFunctionForAnsweringUI = player1SecretFunction;
     } else {
-        // Fallback to show both if no clear winner scenario matches, or if it's a tie
         functionsToDisplay = finalCards.length > 0 ? finalCards : INITIAL_FUNCTIONS.slice(0,2).map(f => ({...f, isActuallySecret: true}));
     }
     gridKey = 'game_over_view';
@@ -437,12 +433,20 @@ export default function RationalGuesserPage() {
 
       <Dialog open={showPongGame} onOpenChange={(open) => { if(!open) setShowPongGame(false)}}>
         <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col items-center justify-center p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Pong Game</DialogTitle>
+            <DialogDescription>A mini-game of Pong has appeared.</DialogDescription>
+          </DialogHeader>
           <PongGame onClose={() => setShowPongGame(false)} />
         </DialogContent>
       </Dialog>
 
       <Dialog open={showFruitCatcherGame} onOpenChange={(open) => { if(!open) setShowFruitCatcherGame(false)}}>
         <DialogContent className="sm:max-w-4xl h-[85vh] flex flex-col items-center justify-center p-0">
+           <DialogHeader className="sr-only">
+            <DialogTitle>Fruit Catcher Game</DialogTitle>
+            <DialogDescription>A mini-game of Fruit Catcher has appeared.</DialogDescription>
+          </DialogHeader>
           <FruitCatcherGame onClose={() => setShowFruitCatcherGame(false)} />
         </DialogContent>
       </Dialog>
