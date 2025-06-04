@@ -19,7 +19,7 @@ interface FunctionGridProps {
   onSelectSecretFunction: (funcId: string) => void;
   onMakeFinalGuess: (funcId: string) => void;
   onToggleEliminate: (funcId: string) => void;
-
+  isGuessingActive: boolean;
   eliminatedFunctions: string[];
   actualSecretFunction: string | null;
 }
@@ -31,11 +31,11 @@ export function FunctionGrid({
   onSelectSecretFunction,
   onMakeFinalGuess,
   onToggleEliminate,
+  isGuessingActive,
   eliminatedFunctions,
   actualSecretFunction,
 }: FunctionGridProps) {
 
-  const [isGuessingActive, setIsGuessingActive] = useState<boolean>(false);
 
   const gridMode: GridMode = (() => {
     if (gamePhase === 'GAME_OVER') {
@@ -130,31 +130,6 @@ export function FunctionGrid({
           />
         );
       })}
+    </div>);
 
-      {/* --- Conditional Messages (Simplified) --- */}
-      {/* These messages are less critical now that all cards are always rendered */}
-      {INITIAL_FUNCTIONS.length === 0 && (
-        <p className="text-muted-foreground col-span-full text-center py-8">
-          Loading functions...
-        </p>
-      )}
-
-      {/* Temporary UI for toggling guessing mode (for testing purposes) */}
-      {/* This button should be moved to GameControls or a dedicated game state management area */}
-      {(gridMode === 'eliminating' || gridMode === 'guessing') ? (
-        <div className="col-span-full text-center mt-4">
-          <button
-            onClick={() => setIsGuessingActive(prev => !prev)}
-            className="p-2 bg-blue-500 text-white rounded"
-          >
-            {isGuessingActive ? 'Exit Guessing Mode (Eliminate)' : 'Enter Guessing Mode (Make Guess)'}
-          </button>
-          <p className="text-sm text-gray-500 mt-1">
-            (This button is for testing `eliminating` vs `guessing` modes. In a real game, this would be part of your game flow, potentially managed by a phase change.)
-          </p>
-        </div>
-      ) : null}
-      <span>{player.role}</span>
-    </div>
-  );
 }

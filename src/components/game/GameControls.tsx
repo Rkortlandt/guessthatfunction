@@ -12,6 +12,8 @@ interface GameControlsProps {
   player: User;
   guessesRemainingCount: number;
   secretFunctionId: string | null;
+  setIsGuessingActive: (value: boolean) => void;
+  isGuessingActive: boolean;
   onTurnFinished: () => void; // This is used for "Done Eliminating / Next Action"
 }
 
@@ -20,6 +22,8 @@ export function GameControls({
   player,
   guessesRemainingCount,
   secretFunctionId,
+  setIsGuessingActive,
+  isGuessingActive,
   onTurnFinished,
 }: GameControlsProps) {
 
@@ -64,12 +68,6 @@ export function GameControls({
           <p className="font-semibold text-lg font-headline">{getGamePhaseMessage()}</p>
         </div>
 
-        {player.role !== 'spectator' && (
-          <div className="p-3 bg-blue-100 rounded-md text-center text-blue-800">
-            <p className="font-semibold">Guesses Remaining: {guessesRemainingCount}</p>
-          </div>
-        )}
-
         {secretFunctionId && (
           <div className="p-3 bg-green-100 rounded-md text-center text-green-800 flex items-center justify-center gap-2">
             <ShieldCheck className="h-5 w-5" />
@@ -96,6 +94,20 @@ export function GameControls({
               <ArrowRightCircle className="mr-2 h-5 w-5" />
               Done Eliminating / Next Action
             </Button>
+          </div>
+        )}
+
+        {showTurnFinishedButton && (
+          <div className="pt-4 border-t">
+            <Button
+              onClick={() => setIsGuessingActive(!isGuessingActive)}
+              variant={isGuessingActive ? "destructive" : "secondary"}
+              className="w-full"
+            >
+              {isGuessingActive ? <ZapOff className="mr-2 h-4 w-4" /> : <HelpCircle className="mr-2 h-4 w-4" />}
+              {isGuessingActive ? "Cancel Guess Mode" : `Make Final Guess (${guessesRemainingCount} left)`}
+            </Button>
+            {isGuessingActive && <p className="text-xs text-center text-muted-foreground mt-2">Click on a function card in the grid to make your final guess.</p>}
           </div>
         )}
       </CardContent>

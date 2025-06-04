@@ -28,7 +28,7 @@ export type GamePhase =
   | 'GAME_OVER';
 
 type PlayerRole = 'player1' | 'player2' | 'spectator' | null;
-type GameWinner = string | null; // Winner is socket.id
+type GameWinner = string | undefined; // Winner is socket.id
 
 interface RationalFunction { // Assuming this structure from game-data.ts
   id: string;
@@ -54,8 +54,9 @@ export default function RationalGuesserPage() {
   const [secretFunctionId, setSecretFunctionId] = useState<string | null>(null); // My chosen secret
   const [opponentSecretFunctionId, setOpponentSecretFunctionId] = useState<string | null>(null); // Opponent's secret (revealed at end)
   const [eliminatedFunctions, setEliminatedFunctions] = useState<string[]>([]); // My eliminations on opponent's grid
-  const [gameWinner, setGameWinner] = useState<GameWinner>(null);
+  const [gameWinner, setGameWinner] = useState<GameWinner>(undefined);
   const [guessesRemaining, setGuessesRemaining] = useState<number>(5); // Example: Number of guesses left
+  const [isGuessingActive, setIsGuessingActive] = useState<boolean>(false);
 
   // --- UI State ---
   const [currentQuestion, setCurrentQuestion] = useState(''); // What I'm asking or opponent is asking
@@ -91,7 +92,7 @@ export default function RationalGuesserPage() {
       setSecretFunctionId(null);
       setOpponentSecretFunctionId(null);
       setEliminatedFunctions([]);
-      setGameWinner(null);
+      setGameWinner(undefined);
       setGuessesRemaining(5);
       setIsConnecting(true); // Go back to connecting state
       toast({
@@ -154,7 +155,7 @@ export default function RationalGuesserPage() {
       // If transitioning from GAME_OVER to SELECTING_FUNCTIONS (new game start)
       if (gamePhase === 'GAME_OVER' && phase === 'SELECTING_FUNCTIONS') {
         console.log("[Client] Resetting game state for a new round.");
-        setGameWinner(null);
+        setGameWinner(undefined);
         setSecretFunctionId(null); // Clear my secret for new selection
         setOpponentSecretFunctionId(null);
         setEliminatedFunctions([]);
@@ -172,7 +173,7 @@ export default function RationalGuesserPage() {
       });
     });
 
-    socketInstance.on('game-winner', (winnerId: string | null) => {
+    socketInstance.on('game-winner', (winnerId: string | undefined) => {
       setGameWinner(winnerId);
       if (winnerId) {
         toast({
@@ -243,7 +244,7 @@ export default function RationalGuesserPage() {
       setSecretFunctionId(null);
       setOpponentSecretFunctionId(null);
       setEliminatedFunctions([]);
-      setGameWinner(null);
+      setGameWinner(undefined);
       setGuessesRemaining(5);
       setCurrentRoomCode(''); // Clear input
       toast({
@@ -310,37 +311,91 @@ export default function RationalGuesserPage() {
   }, [eliminatedFunctions, toast]);
 
   // When I make a final guess (during my QUESTION phase, after entering guessing mode)
+  // ... (inside RationalGuesserPage component)
+
   const handleMakeFinalGuess = useCallback((guessedId: string) => {
-    if (socketRef.current && joinedRoomCode && myRole && ['player1', 'player2'].includes(myRole) &&
-      (gamePhase === 'P1_QUESTION' || gamePhase === 'P2_QUESTION')) {
-      // Check if this is the correct guess
-      // In a real game, this would be a complex check on the server
-      // For now, let's assume if I click it, I declare myself winner
-      // *** IMPORTANT: The `opponentSecretFunctionId` is only set at the END of the game by server,
-      // so this client-side check `guessedId === opponentSecretFunctionId` will often be false
-      // unless the game has already ended. This needs proper server-side validation.
-      // For a functional game, you'd send the guess to the server to validate. ***
+    // Assuming 'opponentSecretFunctionId' is available and accurate on the client for this client-side validation approach
+    // In a real game, this value would still ideally come from the server for integrity.
+    if (myRole && ['player1', 'player2'].includes(myRole) && joinedRoomCode) { // Add joinedRoomCode check
+      if (guessesRemaining <= 0) {
+        toast({
+          title: "No Guesses Left!",
+          description: "You've run out of guesses.",
+          variant: "destructive"
+        });
+        // You might still want to signal the server about game state,
+        // e.g., to declare opponent winner or simply end the game.
+        // socketRef.current?.emit('request-game-phase-change', { roomCode: joinedRoomCode, newPhase: 'GAME_OVER' });
+        return;
+      }
 
-      // Emitting the guess to the server. The server should validate and declare winner.
-      // This is a simplified client-side 'guess and declare winner' for demonstration.
-      toast({
-        title: "Making Guess...",
-        description: `You are guessing: ${INITIAL_FUNCTIONS.find((f) => f.id === guessedId)?.sillyName}.`,
-        variant: "default"
-      });
-      // The server will handle validation and declare winner, so we just emit the guess.
-      // For immediate client feedback, you could reduce guesses here, but server authoritative is better.
-      socketRef.current.emit('declare-winner', { roomCode: joinedRoomCode, winnerId: mySocketId }); // Assuming my guess implies I win if correct
-      // The server will then emit 'game-winner' and 'game-end-details'
-    } else {
-      toast({
-        title: "Cannot Make Guess",
-        description: "Not your turn to guess, or not in a game.",
-        variant: "destructive"
-      });
+      if (!opponentSecretFunctionId) {
+        toast({
+          title: "Error",
+          description: "Opponent's secret not set yet. Cannot guess.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const isCorrectGuess = guessedId === opponentSecretFunctionId;
+
+      if (isCorrectGuess) {
+        toast({
+          title: "Correct Guess!",
+          description: "You guessed correctly!",
+          variant: "default"
+        });
+        setGameWinner(mySocketId); // Declare self as winner
+        setGamePhase('GAME_OVER'); // Move to game over phase
+        setShowGameOverDialog(true);
+        // Optionally, still tell the server about the win to sync state for spectators/opponent
+        socketRef.current?.emit('declare-winner', { roomCode: joinedRoomCode, winnerId: mySocketId });
+      } else {
+        toast({
+          title: "Incorrect Guess",
+          description: "That was not the secret function. You lose a guess.",
+          variant: "destructive"
+        });
+        setGuessesRemaining(prev => prev - 1); // Decrement guesses
+
+        // If no guesses left after an incorrect one
+        if (guessesRemaining - 1 <= 0) { // Check the new remaining count
+          toast({
+            title: "No Guesses Left!",
+            description: "You ran out of guesses. Opponent wins.",
+            variant: "destructive"
+          });
+          const opponentUser = connectedUsers.find(u => u.role !== myRole && (u.role === 'player1' || u.role === 'player2'));
+          if (opponentUser) {
+            setGameWinner(opponentUser.id); // Declare opponent as winner
+            // You might need to make opponent's secret visible here if not already
+          } else {
+            setGameWinner(undefined); // No opponent found
+          }
+          setGamePhase('GAME_OVER');
+          setShowGameOverDialog(true);
+          // Inform server that game is over (and who won if applicable)
+          socketRef.current?.emit('declare-winner', { roomCode: joinedRoomCode, winnerId: opponentUser?.id || null });
+        }
+      }
     }
-  }, [socketRef, joinedRoomCode, myRole, gamePhase, mySocketId, toast]);
+  }, [
+    myRole,
+    joinedRoomCode,
+    opponentSecretFunctionId,
+    mySocketId,
+    toast,
+    setGameWinner,
+    setGamePhase,
+    setShowGameOverDialog,
+    setGuessesRemaining,
+    guessesRemaining, // Ensure this is in deps if you use it directly
+    connectedUsers,
+    socketRef // Add socketRef to deps if it's used inside
+  ]);
 
+  // ... (rest of your component) 
 
   const handleTurnFinished = useCallback(() => {
     if (socketRef.current && joinedRoomCode && myRole && ['player1', 'player2'].includes(myRole)) {
@@ -462,6 +517,8 @@ export default function RationalGuesserPage() {
           <GameControls
             gamePhase={gamePhase}
             guessesRemainingCount={guessesRemaining}
+            setIsGuessingActive={(value) => setIsGuessingActive(value)}
+            isGuessingActive={isGuessingActive}
             player={myPlayer}
             secretFunctionId={secretFunctionId}
             onTurnFinished={handleTurnFinished}
@@ -524,6 +581,7 @@ export default function RationalGuesserPage() {
             onSelectSecretFunction={handleSelectSecretFunction}
             onToggleEliminate={handleToggleEliminate}
             onMakeFinalGuess={handleMakeFinalGuess}
+            isGuessingActive={isGuessingActive}
             secretFunctionId={secretFunctionId}
             actualSecretFunction={opponentSecretFunctionId}
             eliminatedFunctions={eliminatedFunctions}
