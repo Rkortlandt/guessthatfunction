@@ -14,7 +14,7 @@ interface RationalFunctionCardProps {
   showEliminateButton?: boolean;
   onToggleEliminate?: (id: string) => void;
 
-  isPotentialGuess?: boolean;
+  showMakeGuessButton?: boolean;
   onMakeFinalGuess?: (id: string) => void;
 
   isActuallySecret?: boolean;
@@ -28,7 +28,7 @@ export function RationalFunctionCard({
   isSelectedAsSecret,
   showEliminateButton,
   onToggleEliminate,
-  isPotentialGuess,
+  showMakeGuessButton,
   onMakeFinalGuess,
   isActuallySecret,
   isEliminatedOverride,
@@ -105,13 +105,13 @@ export function RationalFunctionCard({
             {displayEliminated ? 'Restore' : 'Eliminate'}
           </Button>
         )}
-         {isPotentialGuess && onMakeFinalGuess && !isActuallySecret && (
-           <Button variant="destructive" size="sm" onClick={() => onMakeFinalGuess(func.id)} className="w-full sm:w-auto">
+        {showMakeGuessButton && onMakeFinalGuess && !isActuallySecret && (
+          <Button variant="destructive" size="sm" onClick={() => onMakeFinalGuess(func.id)} className="w-full sm:w-auto">
             <HelpCircleIcon className="mr-2" /> Make Final Guess
-           </Button>
+          </Button>
         )}
       </CardFooter>
-       {isActuallySecret && (
+      {isActuallySecret && (
         <div className="absolute top-2 right-2 bg-green-600 text-white p-1 px-2 rounded-full text-xs flex items-center z-10 shadow">
           <ShieldAlert className="w-3 h-3 mr-1" /> Secret
         </div>

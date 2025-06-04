@@ -36,14 +36,14 @@ export function PongGame({ onClose }: PongGameProps) {
     setBall({ x: gameAreaWidth / 2, y: gameAreaHeight / 2 });
     let newSpeedX = Math.random() > 0.5 ? INITIAL_BALL_SPEED_X : -INITIAL_BALL_SPEED_X;
     if (servedByP1) newSpeedX = Math.abs(newSpeedX); else newSpeedX = -Math.abs(newSpeedX);
-    
+
     // Ensure ball doesn't start with zero Y speed, or a very small Y speed for better gameplay
     let newSpeedY = (Math.random() * INITIAL_BALL_SPEED_Y * 2) - INITIAL_BALL_SPEED_Y; // -5 to 5
     if (Math.abs(newSpeedY) < 1) { // if too horizontal
-        newSpeedY = Math.sign(newSpeedY || 1) * (INITIAL_BALL_SPEED_Y / 2); // give it some vertical push
+      newSpeedY = Math.sign(newSpeedY || 1) * (INITIAL_BALL_SPEED_Y / 2); // give it some vertical push
     }
 
-    setBallSpeed({ x: newSpeedX, y: newSpeedY});
+    setBallSpeed({ x: newSpeedX, y: newSpeedY });
     setIsPaused(true);
     setTimeout(() => setIsPaused(false), 1000);
   }, [gameAreaWidth, gameAreaHeight]);
@@ -59,7 +59,7 @@ export function PongGame({ onClose }: PongGameProps) {
 
   useEffect(() => {
     resetGame();
-  },[resetGame]);
+  }, [resetGame]);
 
 
   useEffect(() => {
@@ -174,7 +174,7 @@ export function PongGame({ onClose }: PongGameProps) {
         gameLoopRef.current = requestAnimationFrame(gameLoop); // Reschedule and exit this iteration
         return;
       }
-      
+
       // Clamp ball speed to prevent it from becoming too fast
       newSpeedX = Math.max(-15, Math.min(15, newSpeedX));
       newSpeedY = Math.max(-10, Math.min(10, newSpeedY));
@@ -188,7 +188,7 @@ export function PongGame({ onClose }: PongGameProps) {
 
     // Start the game loop only if the game is not over
     if (!gameOverMessage) {
-        gameLoopRef.current = requestAnimationFrame(gameLoop);
+      gameLoopRef.current = requestAnimationFrame(gameLoop);
     }
 
     return () => {
@@ -246,8 +246,8 @@ export function PongGame({ onClose }: PongGameProps) {
         />
         <circle cx={ball.x} cy={ball.y} r={BALL_RADIUS} fill="white" />
         {gameOverMessage}
-         {isPaused && !gameOverMessage && (
-          <text x={gameAreaWidth/2} y={gameAreaHeight/2 - 30} textAnchor="middle" fill="cyan" fontSize="24">
+        {isPaused && !gameOverMessage && (
+          <text x={gameAreaWidth / 2} y={gameAreaHeight / 2 - 30} textAnchor="middle" fill="cyan" fontSize="24">
             Get Ready...
           </text>
         )}
