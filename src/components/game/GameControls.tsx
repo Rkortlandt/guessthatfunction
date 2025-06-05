@@ -6,6 +6,7 @@ import { Loader2, Lightbulb, HelpCircle, CheckCircle, XCircle, ShieldQuestion, U
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { GamePhase, User } from '@/app/page';
+import { INITIAL_FUNCTIONS } from '@/lib/game-data';
 
 interface GameControlsProps {
   gamePhase: GamePhase;
@@ -71,7 +72,7 @@ export function GameControls({
         {secretFunctionId && (
           <div className="p-3 bg-green-100 rounded-md text-center text-green-800 flex items-center justify-center gap-2">
             <ShieldCheck className="h-5 w-5" />
-            <p className="font-semibold">Your Secret: {secretFunctionId}</p>
+            <p className="font-semibold">Your Secret: {INITIAL_FUNCTIONS.find((func) => func.id === secretFunctionId)?.sillyName}</p>
           </div>
         )}
         {!secretFunctionId && (player.role === 'player1' || player.role === 'player2') && (

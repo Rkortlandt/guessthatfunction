@@ -7,31 +7,30 @@ import Image from 'next/image';
 
 interface RationalFunctionCardProps {
   func: RationalFunction;
-  showSelectButton?: boolean;
-  onSelectSecretFunction?: (id: string) => void;
-  isSelectedAsSecret?: boolean;
-
-  showEliminateButton?: boolean;
-  onToggleEliminate?: (id: string) => void;
-
-  showMakeGuessButton?: boolean;
-  onMakeFinalGuess?: (id: string) => void;
-
-  isActuallySecret?: boolean;
-  isEliminatedOverride?: boolean;
+  showEliminateButton: boolean;
+  showSelectButton: boolean;
+  showMakeGuessButton: boolean;
+  isSecret: boolean;
+  isOpponentSecret: boolean;
+  isSelectedAsSecret: boolean;
+  isEliminatedOverride: boolean;
+  onSelectSecretFunction: (id: string) => void;
+  onToggleEliminate: (id: string) => void;
+  onMakeFinalGuess: (id: string) => void;
 }
 
 export function RationalFunctionCard({
   func,
-  showSelectButton,
-  onSelectSecretFunction,
   isSelectedAsSecret,
-  showEliminateButton,
-  onToggleEliminate,
-  showMakeGuessButton,
-  onMakeFinalGuess,
-  isActuallySecret,
+  isSecret,
   isEliminatedOverride,
+  isOpponentSecret,
+  showSelectButton,
+  showEliminateButton,
+  showMakeGuessButton,
+  onSelectSecretFunction,
+  onToggleEliminate,
+  onMakeFinalGuess,
 }: RationalFunctionCardProps) {
 
   const cardClassBase = 'transition-opacity duration-300 ease-in-out relative flex flex-col';
@@ -39,11 +38,13 @@ export function RationalFunctionCard({
 
   const displayEliminated = typeof isEliminatedOverride === 'boolean' ? isEliminatedOverride : func.isEliminated;
 
-  if (isActuallySecret) {
+  if (isOpponentSecret) {
+    cardClass = `${cardClassBase} border-green-500 border-4 ring-4 ring-red-500/50 shadow-2xl`;
+  } else if (isSecret && (!showEliminateButton && !showMakeGuessButton)) {
     cardClass = `${cardClassBase} border-green-500 border-4 ring-4 ring-green-500/50 shadow-2xl`;
   } else if (isSelectedAsSecret && showSelectButton) {
     cardClass = `${cardClassBase} border-primary border-4 shadow-2xl`;
-  } else if (displayEliminated && !showSelectButton && !isActuallySecret) {
+  } else if (displayEliminated && !showSelectButton && !isOpponentSecret) {
     cardClass = `${cardClassBase} opacity-40 hover:shadow-lg`;
   } else {
     cardClass = `${cardClassBase} hover:shadow-lg`;
@@ -81,7 +82,7 @@ export function RationalFunctionCard({
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 min-h-[40px] mt-auto">
-        {showSelectButton && onSelectSecretFunction && (
+        {showSelectButton && (
           <Button
             variant={isSelectedAsSecret ? "secondary" : "default"}
             size="sm"
@@ -93,7 +94,7 @@ export function RationalFunctionCard({
             {isSelectedAsSecret ? 'Selected Secret' : 'Select as Secret'}
           </Button>
         )}
-        {showEliminateButton && onToggleEliminate && !isActuallySecret && (
+        {showEliminateButton && !isOpponentSecret && (
           <Button
             variant="outline"
             size="sm"
@@ -105,13 +106,13 @@ export function RationalFunctionCard({
             {displayEliminated ? 'Restore' : 'Eliminate'}
           </Button>
         )}
-        {showMakeGuessButton && onMakeFinalGuess && !isActuallySecret && (
-          <Button variant="destructive" size="sm" onClick={() => onMakeFinalGuess(func.id)} className="w-full sm:w-auto">
+        {showMakeGuessButton && !isOpponentSecret && (
+          <Button variant="destructive" size="sm" onClick={() => onMakeFinalGuess(func.id)} className=" px-4 w-full">
             <HelpCircleIcon className="mr-2" /> Make Final Guess
           </Button>
         )}
       </CardFooter>
-      {isActuallySecret && (
+      {isOpponentSecret && (
         <div className="absolute top-2 right-2 bg-green-600 text-white p-1 px-2 rounded-full text-xs flex items-center z-10 shadow">
           <ShieldAlert className="w-3 h-3 mr-1" /> Secret
         </div>

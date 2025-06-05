@@ -6,9 +6,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        // !!! IMPORTANT: Make sure this matches your client's origin !!!
-        // Example: "http://localhost:9002" or ["http://localhost:9002", "http://localhost:3000"]
-        origin: "http://localhost:9002",
+        origin: "http://localhost:9002", // Ensure this matches your client's origin
         methods: ["GET", "POST"]
     }
 });
@@ -16,18 +14,23 @@ const io = new Server(httpServer, {
 // Server-side state to manage all rooms
 // Structure:
 // {
-//    'ROOM_CODE': {
-//      player1Id: string | null,
-//      player2Id: string | null,
-//      usersInRoom: Map<string, { id: string, role: string }>,
-//      currentGamePhase: string,
-//      winnerId: string | null,
-//      player1SecretFunctionId: string | null, // Secret ID for Player 1
-//      player2SecretFunctionId: string | null  // Secret ID for Player 2
-//    },
-//    ...
+//     'ROOM_CODE': {
+//         player1Id: string | null,
+//         player2Id: string | null,
+//         usersInRoom: Map<string, { id: string, role: string }>,
+//         currentGamePhase: string,
+//         winnerId: string | null,
+//         player1SecretFunctionId: string | null,
+//         player2SecretFunctionId: string | null,
+//         player1GuessesRemaining: number | undefined, // Added
+//         player2GuessesRemaining: number | undefined  // Added
+//     },
+//     ...
 // }
 const allRoomsState = {};
+
+// Helper to define the starting number of guesses
+const STARTING_GUESSES = 5; // 🎯 Define how many guesses players start with
 
 // Helper to remove a socket from its current room's state
 function removeSocketFromRoomState(socketId, roomCode) {
@@ -42,19 +45,27 @@ function removeSocketFromRoomState(socketId, roomCode) {
         currentRoom.usersInRoom.delete(socketId);
         console.log(`[Server] Socket ${socketId} removed from room state ${roomCode}`);
 
-        // Free up player slots if the disconnected/leaving user was a player
         if (currentRoom.player1Id === socketId) {
             currentRoom.player1Id = null;
-            currentRoom.player1SecretFunctionId = null; // Clear secret if player leaves
-            console.log(`[Server] Player1 slot and secret freed in room ${roomCode}`);
+            currentRoom.player1SecretFunctionId = null;
+            currentRoom.player1GuessesRemaining = undefined; // Clear guesses if player leaves
+            console.log(`[Server] Player1 slot, secret, and guesses freed in room ${roomCode}`);
         } else if (currentRoom.player2Id === socketId) {
             currentRoom.player2Id = null;
-            currentRoom.player2SecretFunctionId = null; // Clear secret if player leaves
-            console.log(`[Server] Player2 slot and secret freed in room ${roomCode}`);
+            currentRoom.player2SecretFunctionId = null;
+            currentRoom.player2GuessesRemaining = undefined; // Clear guesses if player leaves
+            console.log(`[Server] Player2 slot, secret, and guesses freed in room ${roomCode}`);
         }
 
         if (currentRoom.usersInRoom.size > 0) {
             io.to(roomCode).emit('user-disconnected', userData);
+            // If a player leaves mid-game, and guesses were initialized, update remaining clients
+            if (userData.role === 'player1' || userData.role === 'player2') {
+                io.to(roomCode).emit('guesses-remaining-update', {
+                    player1: currentRoom.player1GuessesRemaining,
+                    player2: currentRoom.player2GuessesRemaining
+                });
+            }
             console.log(`[Server] Notified others in ${roomCode} about ${socketId} disconnection/leave (Role: ${userData.role})`);
         } else {
             console.log(`[Server] Room ${roomCode} is now empty. Cleaning up room state.`);
@@ -89,11 +100,12 @@ io.on('connection', (socket) => {
                 player1Id: null,
                 player2Id: null,
                 usersInRoom: new Map(),
-                // Initial game phase is now for both players to select functions
                 currentGamePhase: 'SELECTING_FUNCTIONS',
                 winnerId: null,
-                player1SecretFunctionId: null, // Initialize secret IDs
-                player2SecretFunctionId: null  // Initialize secret IDs
+                player1SecretFunctionId: null,
+                player2SecretFunctionId: null,
+                player1GuessesRemaining: undefined, // Initialize guess counts
+                player2GuessesRemaining: undefined  // Initialize guess counts
             };
             console.log(`[Server] Created new room state for ${roomCode}, initial phase: ${allRoomsState[roomCode].currentGamePhase}`);
         }
@@ -128,12 +140,19 @@ io.on('connection', (socket) => {
         socket.emit('game-phase-update', currentRoom.currentGamePhase);
         console.log(`[Server] Sent current phase ${currentRoom.currentGamePhase} to new user ${socket.id} in room ${roomCode}`);
 
+        // If guesses have already been initialized (e.g., joining mid-game after secrets are set), send them
+        if (typeof currentRoom.player1GuessesRemaining === 'number' && typeof currentRoom.player2GuessesRemaining === 'number') {
+            socket.emit('guesses-remaining-update', {
+                player1: currentRoom.player1GuessesRemaining,
+                player2: currentRoom.player2GuessesRemaining
+            });
+        }
+
         if (currentRoom.winnerId) {
             socket.emit('game-winner', currentRoom.winnerId);
             console.log(`[Server] Sent existing winner ${currentRoom.winnerId} to new user ${socket.id} in room ${roomCode}`);
         }
 
-        // If game is over and secrets are known, send game-end-details to new joiner
         if (currentRoom.currentGamePhase === 'GAME_OVER' && currentRoom.player1SecretFunctionId && currentRoom.player2SecretFunctionId) {
             socket.emit('game-end-details', {
                 winnerId: currentRoom.winnerId,
@@ -152,13 +171,12 @@ io.on('connection', (socket) => {
         }
 
         socket.leave(roomCode);
-        removeSocketFromRoomState(socket.id, roomCode);
+        removeSocketFromRoomState(socket.id, roomCode); // This will handle guess updates if a player leaves
         socket.data.currentRoom = null;
         socket.emit('room-leave-status', { success: true });
         console.log(`[Server] Socket ${socket.id} successfully left room ${roomCode}`);
     });
 
-    // Handle clients setting their secret function
     socket.on('set-secret-function', ({ roomCode, secretFunctionId }) => {
         const currentRoom = allRoomsState[roomCode];
         if (!currentRoom) {
@@ -172,15 +190,12 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // Only allow setting secret during the SELECTING_FUNCTIONS phase
         if (currentRoom.currentGamePhase !== 'SELECTING_FUNCTIONS') {
             console.warn(`[Server] ${socket.id} tried to set secret in wrong phase: ${currentRoom.currentGamePhase}`);
-            // Optionally, emit an error back to the client
             return;
         }
 
         if (requestingUser.role === 'player1') {
-            // Prevent player 1 from re-setting if already set
             if (currentRoom.player1SecretFunctionId) {
                 console.warn(`[Server] Player 1 (${socket.id}) tried to re-set secret in ${roomCode}`);
                 return;
@@ -188,7 +203,6 @@ io.on('connection', (socket) => {
             currentRoom.player1SecretFunctionId = secretFunctionId;
             console.log(`[Server] Player 1 (${socket.id}) set secret in ${roomCode}: ${secretFunctionId}`);
         } else if (requestingUser.role === 'player2') {
-            // Prevent player 2 from re-setting if already set
             if (currentRoom.player2SecretFunctionId) {
                 console.warn(`[Server] Player 2 (${socket.id}) tried to re-set secret in ${roomCode}`);
                 return;
@@ -197,14 +211,21 @@ io.on('connection', (socket) => {
             console.log(`[Server] Player 2 (${socket.id}) set secret in ${roomCode}: ${secretFunctionId}`);
         }
 
-        // If both players have selected their secrets, advance the phase
         if (currentRoom.player1SecretFunctionId && currentRoom.player2SecretFunctionId) {
-            currentRoom.currentGamePhase = 'P1_QUESTION'; // Advance to the first question phase
+            currentRoom.currentGamePhase = 'P1_QUESTION';
+            // ✨ Initialize guesses when both players have set secrets
+            currentRoom.player1GuessesRemaining = STARTING_GUESSES;
+            currentRoom.player2GuessesRemaining = STARTING_GUESSES;
+
             io.to(roomCode).emit('game-phase-update', currentRoom.currentGamePhase);
-            console.log(`[Server] Both players set secrets in ${roomCode}. Advancing phase to: ${currentRoom.currentGamePhase}`);
+            // 📢 Broadcast initial guess counts
+            io.to(roomCode).emit('guesses-remaining-update', {
+                player1: currentRoom.player1GuessesRemaining,
+                player2: currentRoom.player2GuessesRemaining
+            });
+            console.log(`[Server] Both players set secrets in ${roomCode}. Advancing phase to: ${currentRoom.currentGamePhase}. Guesses initialized.`);
         }
     });
-
 
     socket.on('request-game-phase-change', ({ roomCode, newPhase }) => {
         const currentRoom = allRoomsState[roomCode];
@@ -219,7 +240,6 @@ io.on('connection', (socket) => {
             return;
         }
 
-        // Update validPhases to include the new SELECTING_FUNCTIONS phase
         const validPhases = ['SELECTING_FUNCTIONS', 'P1_QUESTION', 'P2_QUESTION', 'GAME_OVER'];
         if (!validPhases.includes(newPhase)) {
             console.warn(`[Server] Invalid new phase requested: ${newPhase} from ${socket.id}`);
@@ -227,20 +247,13 @@ io.on('connection', (socket) => {
         }
 
         console.log(`[Server] ${socket.id} (${requestingUser.role}) requesting phase change in ${roomCode} to: ${newPhase}`);
-
+        const oldPhase = currentRoom.currentGamePhase;
         currentRoom.currentGamePhase = newPhase;
-
         io.to(roomCode).emit('game-phase-update', newPhase);
         console.log(`[Server] Broadcasted new phase '${newPhase}' to room ${roomCode}`);
 
-        // If the game phase becomes GAME_OVER, ensure winner is cleared if it wasn't set explicitly
         if (newPhase === 'GAME_OVER') {
-            // If GAME_OVER is manually set without a winner declared, clear secrets too
-            if (!currentRoom.winnerId) {
-                currentRoom.player1SecretFunctionId = null;
-                currentRoom.player2SecretFunctionId = null;
-            }
-            // Always emit game-end-details when GAME_OVER is set (even if secrets are null)
+            // ... (game over logic for emitting game-end-details remains the same)
             io.to(roomCode).emit('game-end-details', {
                 winnerId: currentRoom.winnerId,
                 player1Secret: currentRoom.player1SecretFunctionId,
@@ -248,52 +261,155 @@ io.on('connection', (socket) => {
             });
             console.log(`[Server] Game over in ${roomCode}. Sending game end details.`);
         } else {
-            // Clear winner and secrets if phase changes from GAME_OVER to another
-            currentRoom.winnerId = null;
-            currentRoom.player1SecretFunctionId = null;
-            currentRoom.player2SecretFunctionId = null;
-            io.to(roomCode).emit('game-winner', null); // Clear winner on clients
-            io.to(roomCode).emit('game-end-details', { winnerId: null, player1Secret: null, player2Secret: null }); // Clear secrets on clients
+            // Clear winner and secrets if phase changes from GAME_OVER to another (implying a reset)
+            if (oldPhase === 'GAME_OVER') {
+                currentRoom.winnerId = null;
+                currentRoom.player1SecretFunctionId = null;
+                currentRoom.player2SecretFunctionId = null;
+                io.to(roomCode).emit('game-winner', null);
+                io.to(roomCode).emit('game-end-details', { winnerId: null, player1Secret: null, player2Secret: null });
+            }
+
+            // Reset guesses to undefined if starting a new game selection phase
+            if (newPhase === 'SELECTING_FUNCTIONS') {
+                currentRoom.player1GuessesRemaining = undefined;
+                currentRoom.player2GuessesRemaining = undefined;
+                io.to(roomCode).emit('guesses-remaining-update', { player1: undefined, player2: undefined });
+                console.log(`[Server] Game reset to SELECTING_FUNCTIONS in ${roomCode}. Guesses cleared.`);
+            }
+            // THE PROBLEMATIC BLOCK IS REMOVED FROM HERE
+            // No other conditions in this handler should reset guesses to STARTING_GUESSES.
+            // That is handled by 'set-secret-function' when gameplay is ready to begin.
         }
     });
 
-    socket.on('declare-winner', ({ roomCode, winnerId }) => {
+    socket.on('make-guess', ({ roomCode, guessedFunctionId }) => {
+        console.log("guess " + guessedFunctionId)
         const currentRoom = allRoomsState[roomCode];
         if (!currentRoom) {
-            console.warn(`[Server] Request to declare winner for non-existent room ${roomCode} by ${socket.id}`);
+            console.warn(`[Server] Guess for non-existent room ${roomCode} by ${socket.id}`);
+            socket.emit('guess-result', { success: false, message: 'Room not found.' });
             return;
         }
 
-        const requestingUser = currentRoom.usersInRoom.get(socket.id);
-        if (!requestingUser || !['player1', 'player2'].includes(requestingUser.role)) {
-            console.warn(`[Server] Non-player ${socket.id} tried to declare winner in room ${roomCode}`);
+        const guessingPlayer = currentRoom.usersInRoom.get(socket.id);
+        if (!guessingPlayer || !['player1', 'player2'].includes(guessingPlayer.role)) {
+            console.warn(`[Server] Non-player ${socket.id} tried to make a guess in room ${roomCode}`);
+            socket.emit('guess-result', { success: false, message: 'You are not a player.' });
             return;
         }
 
-        const canDeclareWinner = ['P1_QUESTION', 'P2_QUESTION'].includes(currentRoom.currentGamePhase);
+        const isPlayer1Turn = guessingPlayer.role === 'player1' && currentRoom.currentGamePhase === 'P1_QUESTION';
+        const isPlayer2Turn = guessingPlayer.role === 'player2' && currentRoom.currentGamePhase === 'P2_QUESTION';
 
-        if (!canDeclareWinner) {
-            console.warn(`[Server] ${socket.id} tried to declare winner in wrong phase: ${currentRoom.currentGamePhase}`);
+        if (!isPlayer1Turn && !isPlayer2Turn) {
+            console.warn(`[Server] ${socket.id} tried to guess in wrong phase: ${currentRoom.currentGamePhase}`);
+            socket.emit('guess-result', { success: false, message: 'It\'s not your turn to make a final guess.' });
             return;
         }
 
-        // Set the winner ID and update the game phase to GAME_OVER
-        currentRoom.winnerId = winnerId;
-        currentRoom.currentGamePhase = 'GAME_OVER';
+        let playerGuessesRemaining;
+        let opponentSecret;
+        let opponentId;
+        let playerRoleForGuessCount;
 
-        console.log(`[Server] Winner declared in room ${roomCode}: ${winnerId}. Game over.`);
+        if (guessingPlayer.role === 'player1') {
+            playerGuessesRemaining = currentRoom.player1GuessesRemaining;
+            opponentSecret = currentRoom.player2SecretFunctionId;
+            opponentId = currentRoom.player2Id;
+            playerRoleForGuessCount = 'player1';
+        } else { // player2
+            playerGuessesRemaining = currentRoom.player2GuessesRemaining;
+            opponentSecret = currentRoom.player1SecretFunctionId;
+            opponentId = currentRoom.player1Id;
+            playerRoleForGuessCount = 'player2';
+        }
 
-        // Broadcast the winner ID and game phase to all clients in the room
-        io.to(roomCode).emit('game-winner', winnerId);
-        io.to(roomCode).emit('game-phase-update', 'GAME_OVER');
+        // Fallback: Ensure guesses are initialized if somehow they weren't
+        if (typeof playerGuessesRemaining !== 'number') {
+            console.error(`[Server] CRITICAL: Guesses not initialized for ${guessingPlayer.role} in room ${roomCode} before guess attempt. Forcing initialization.`);
+            currentRoom.player1GuessesRemaining = STARTING_GUESSES;
+            currentRoom.player2GuessesRemaining = STARTING_GUESSES;
+            playerGuessesRemaining = (guessingPlayer.role === 'player1') ? currentRoom.player1GuessesRemaining : currentRoom.player2GuessesRemaining;
 
-        // Also broadcast both players' secret functions
-        io.to(roomCode).emit('game-end-details', {
-            winnerId: winnerId,
-            player1Secret: currentRoom.player1SecretFunctionId,
-            player2Secret: currentRoom.player2SecretFunctionId
+            io.to(roomCode).emit('guesses-remaining-update', { // Notify all clients of this correction
+                player1: currentRoom.player1GuessesRemaining,
+                player2: currentRoom.player2GuessesRemaining
+            });
+            // It might be better to emit an error here and prevent the guess,
+            // but for robustness, we'll allow the guess with freshly initialized counts.
+        }
+
+
+        if (playerGuessesRemaining <= 0) {
+            console.log(`[Server] Player ${socket.id} has no guesses left in room ${roomCode}.`);
+            socket.emit('guess-result', { success: false, message: 'You have no guesses left!' });
+            if (currentRoom.currentGamePhase !== 'GAME_OVER') {
+                currentRoom.currentGamePhase = 'GAME_OVER';
+                currentRoom.winnerId = opponentId;
+                io.to(roomCode).emit('game-phase-update', 'GAME_OVER');
+                io.to(roomCode).emit('game-winner', opponentId);
+                io.to(roomCode).emit('game-end-details', {
+                    winnerId: opponentId,
+                    player1Secret: currentRoom.player1SecretFunctionId,
+                    player2Secret: currentRoom.player2SecretFunctionId
+                });
+            }
+            return;
+        }
+
+        if (playerRoleForGuessCount === 'player1') {
+            currentRoom.player1GuessesRemaining--;
+        } else {
+            currentRoom.player2GuessesRemaining--;
+        }
+
+        io.to(roomCode).emit('guesses-remaining-update', {
+            player1: currentRoom.player1GuessesRemaining,
+            player2: currentRoom.player2GuessesRemaining
         });
-        console.log(`[Server] Sending game end details with secrets for room ${roomCode}`);
+        console.log(`[Server] Player ${socket.id} made a guess. ${guessingPlayer.role === 'player1' ? 'P1' : 'P2'} Guesses left: ${guessingPlayer.role === 'player1' ? currentRoom.player1GuessesRemaining : currentRoom.player2GuessesRemaining}`);
+
+        if (guessedFunctionId === opponentSecret) {
+            console.log(`[Server] Correct guess by ${socket.id} in room ${roomCode}. Winner declared! 🎉`);
+            currentRoom.winnerId = socket.id;
+            currentRoom.currentGamePhase = 'GAME_OVER';
+
+            socket.emit('guess-result', { success: true, correct: true, winnerId: socket.id });
+            io.to(roomCode).emit('game-winner', socket.id);
+            io.to(roomCode).emit('game-phase-update', 'GAME_OVER');
+            io.to(roomCode).emit('game-end-details', {
+                winnerId: socket.id,
+                player1Secret: currentRoom.player1SecretFunctionId,
+                player2Secret: currentRoom.player2SecretFunctionId
+            });
+        } else {
+            console.log(`[Server] Incorrect guess by ${socket.id} in room ${roomCode}.`);
+            socket.emit('guess-result', { success: true, correct: false, message: 'Incorrect guess. 🤔' });
+
+            const currentPlayerOutOfGuesses =
+                (guessingPlayer.role === 'player1' && currentRoom.player1GuessesRemaining <= 0) ||
+                (guessingPlayer.role === 'player2' && currentRoom.player2GuessesRemaining <= 0);
+
+            if (currentPlayerOutOfGuesses) {
+                console.log(`[Server] Player ${socket.id} ran out of guesses. Opponent ${opponentId} wins. 🏆`);
+                currentRoom.winnerId = opponentId;
+                currentRoom.currentGamePhase = 'GAME_OVER';
+
+                io.to(roomCode).emit('game-winner', opponentId);
+                io.to(roomCode).emit('game-phase-update', 'GAME_OVER');
+                io.to(roomCode).emit('game-end-details', {
+                    winnerId: opponentId,
+                    player1Secret: currentRoom.player1SecretFunctionId,
+                    player2Secret: currentRoom.player2SecretFunctionId
+                });
+            } else {
+                const nextPhase = guessingPlayer.role === 'player1' ? 'P2_QUESTION' : 'P1_QUESTION';
+                currentRoom.currentGamePhase = nextPhase;
+                io.to(roomCode).emit('game-phase-update', nextPhase);
+                console.log(`[Server] Advancing phase to: ${nextPhase} after incorrect guess.`);
+            }
+        }
     });
 
     socket.on('disconnect', () => {
@@ -306,5 +422,5 @@ io.on('connection', (socket) => {
 
 const PORT = 3001;
 httpServer.listen(PORT, () => {
-    console.log(`Signaling server (with player secrets) listening on port ${PORT}`);
+    console.log(`🚀 Signaling server (with player secrets & guess tracking) listening on port ${PORT}`);
 });
